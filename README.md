@@ -71,7 +71,109 @@ src/
 
 ---
 
+## 🏛️ System Architecture
+
+### 📊 High-Level Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CLIENT LAYER                                      │
+├──────────────────────┬──────────────────────┬───────────────────────────────┤
+│   Mobile App         │   Web App            │   Admin Dashboard             │
+│   (React Native)     │   (React/Vue)        │   (React)                     │
+└──────────────────────┴──────────────────────┴───────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    API GATEWAY & LOAD BALANCER                              │
+│                     (NGINX / AWS ALB)                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     NESTJS BACKEND (Main Server)                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │  Auth        │  │  Users       │  │  Patients    │  │  Doctors     │     │
+│  │  Module      │  │  Module      │  │  Module      │  │  Module      │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘     │
+│                                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │ Appointments │  │ Prescriptions│  │  Medical     │  │  Requests    │     │
+│  │ Module       │  │  Module      │  │  Records     │  │  Module      │     │
+│  │ (NEW - P2)   │  │  Module      │  │  Module      │  │              │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘     │
+│                                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │  Chat        │  │  QR          │  │  Payments    │  │  Notification│     │
+│  │  Module      │  │  Module      │  │  Module      │  │  Module      │     │
+│  │  (WebSocket) │  │              │  │  (NEW - P2)  │  │              │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘     │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │              SHARED SERVICES & GUARDS                               │    │
+│  │  Auth Guard │ RBAC Guard │ Logger │ Email │ File Upload │ Cron      │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+         ↓                      ↓                       ↓
+    ┌────────────┐       ┌──────────────┐        ┌──────────────┐
+    │ PostgreSQL │       │    Redis     │        │  Socket.io   │
+    │ (Primary DB)       │ (Cache/Queue)│        │ (Real-time)  │
+    └────────────┘       └──────────────┘        └──────────────┘
+         ↓
+    ┌──────────────────────────────────────────────────────────┐
+    │  Data Persistence Layer (Prisma ORM)                     │
+    │  • Connection pooling                                    │
+    │  • Migration management                                  │
+    │  • Query optimization                                    │
+    └──────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      EXTERNAL SERVICES & INTEGRATIONS                       │
+├──────────────┬────────────────┬──────────────┬─────────────┬────────────────┤
+│   Google     │   Nodemailer   │   AWS S3     │   Paymob    │  Twilio SMS    │
+│   OAuth2     │   (Email)      │  (File Store)│  (Payments) │  (Alerts)      │
+└──────────────┴────────────────┴──────────────┴─────────────┴────────────────┘
+```
+
+### 🏗️ Layered Architecture (Vertical Slice)
+
+```
+REQUEST → API Controller (DTOs validation)
+              ↓
+        Service Layer (Business Logic)
+              ↓
+        Repository/ORM (Prisma)
+              ↓
+        PostgreSQL + Redis Cache
+              ↓
+        RESPONSE (JSON + Status Code)
+```
+
+#### Example Flow: Appointment Booking
+
+```
+Patient submits booking request
+    ↓
+AppointmentController.bookAppointment()
+    ↓
+AppointmentService.createAppointment()
+    - Validate doctor availability (Redis cache check first)
+    - Check for double booking (DB lock)
+    - Create appointment record
+    - Publish event to notification queue
+    - Return appointment with confirmation
+    ↓
+Database stored, Cache updated, Notification queued
+    ↓
+WebSocket notification sent to doctor in real-time
+```
+
+---
+
 ## 🎯 Roadmap
+
+> [!NOTE]
+> Detailed technical logic and design flows for the upcoming phases can be found in our [Phase 2 Design Document](docs/PHASE_2_DESIGN.md).
 
 ### Phase 1: Foundation (MVP) ✅
 

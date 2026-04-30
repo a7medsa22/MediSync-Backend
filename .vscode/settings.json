@@ -1,3 +1,4 @@
 {
-    "CodeGPT.apiKey": "Groq"
+    "CodeGPT.apiKey": "Groq",
+    "prisma.pinToPrisma6": true
 }

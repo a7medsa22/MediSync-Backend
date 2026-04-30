@@ -13,6 +13,7 @@ import { QrModule } from './qr/qr.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
 import { CacheModule } from './common/cache/cache.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { CacheModule } from './common/cache/cache.module';
     QrModule,
     NotificationsModule,
     ChatModule,
+    AppointmentsModule,
   ],
   providers: [
     {
