@@ -285,7 +285,8 @@ export class RequestsService {
 
     return connection;
   }
-
+  
+  // i not need this sevice after finshed phases 2 
   async updateAvailability(
     connectionId: string,
     doctorId: string,

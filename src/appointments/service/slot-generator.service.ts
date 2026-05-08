@@ -188,7 +188,7 @@ export class SlotGeneratorService {
         return result;
     }
 
-    private dateToMinutes(date: Date): number {
+     dateToMinutes(date: Date): number {
         return date.getHours() * 60 + date.getMinutes();
     }
 

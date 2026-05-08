@@ -1,18 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { CreateNotificationDto } from './dto/notifications.dto';
 
 @Injectable()
 export class NotificationsService {
   constructor(private prisma: PrismaService) {}
 
-  async createNotification(
-    userId: string,
-    type: NotificationType,
-    title: string,
-    message: string,
-    metadata?: any,
-  ) {
+  async createNotification(dto:CreateNotificationDto) {
+    const {userId,type,title,message,metadata} = dto
     return this.prisma.notification.create({
       data: {
         userId,
@@ -33,12 +29,13 @@ export class NotificationsService {
     doctorName: string,
     doctorEmail: string,
   ) {
-    return this.createNotification(
-      patientUserId,
-      NotificationType.CONNECTION_ACCEPTED,
-      'Connection Successful',
-      `You are now connected with Dr. ${doctorName}`,
-      { doctorEmail },
+    return this.createNotification({
+      userId:patientUserId,
+      type:NotificationType.CONNECTION_ACCEPTED,
+      title:'Connection Successful',
+      message:`You are now connected with Dr. ${doctorName}`,
+      metadata:{ doctorEmail },
+    }
     );
   }
   /**
@@ -49,13 +46,13 @@ export class NotificationsService {
     patientName: string,
     patientEmail: string,
   ) {
-    return this.createNotification(
-      doctorUserId,
-      NotificationType.NEW_CONNECTION,
-      'New Patient Connection',
-      `${patientName} has connected with you via QR.`,
-      { patientEmail },
-    );
+    return this.createNotification({
+      userId:doctorUserId,
+      type:NotificationType.NEW_CONNECTION,
+      title:'New Patient Connection',
+      message:`${patientName} has connected with you via QR.`,
+      metadata:{ patientEmail },
+  });
   }
   /**
    * Get user notifications

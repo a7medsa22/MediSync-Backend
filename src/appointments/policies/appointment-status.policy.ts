@@ -55,8 +55,51 @@ export class AppointmentStatusPolicy {
     }
 
     /**
-     * Checks if an appointment status is active (blocks booking).
+     * Statuses that can be confirmed by the patient.
+     * Only PENDING appointments can be confirmed.
      */
+    static confirmableStatuses(): AppointmentStatus[] {
+        return [AppointmentStatus.PENDING];
+    }
+
+    private static statusTransitions(): Record<AppointmentStatus, AppointmentStatus[]> {
+        return {
+            [AppointmentStatus.PENDING]: [
+                AppointmentStatus.CONFIRMED,
+                AppointmentStatus.CANCELLED,
+            ],
+            [AppointmentStatus.CONFIRMED]: [
+                AppointmentStatus.IN_PROGRESS,
+                AppointmentStatus.COMPLETED,
+                AppointmentStatus.CANCELLED,
+            ],
+            [AppointmentStatus.IN_PROGRESS]: [
+                AppointmentStatus.COMPLETED,
+                AppointmentStatus.CANCELLED,
+            ],
+            [AppointmentStatus.COMPLETED]: [],
+            [AppointmentStatus.CANCELLED]: [],
+            [AppointmentStatus.NO_SHOW]: [],
+        };
+    }
+
+    /**
+     * Checks whether a status transition is allowed by lifecycle rules.
+     */
+    static canTransition(
+        fromStatus: AppointmentStatus,
+        toStatus: AppointmentStatus,
+    ): boolean {
+        return this.statusTransitions()[fromStatus]?.includes(toStatus) ?? false;
+    }
+
+    /**
+     * Checks if an appointment can be cancelled.
+     */
+    static canBeCancelled(status: AppointmentStatus): boolean {
+        return this.canTransition(status, AppointmentStatus.CANCELLED);
+    }
+
     static isActive(status: AppointmentStatus): boolean {
         return this.activeStatuses().includes(status);
     }
@@ -90,8 +133,12 @@ export class AppointmentStatusPolicy {
     }
 
     /**
-     * All valid appointment statuses.
+     * Checks if an appointment can be confirmed by the patient.
      */
+    static canBeConfirmed(status: AppointmentStatus): boolean {
+        return this.confirmableStatuses().includes(status);
+    }
+
     static allStatuses(): AppointmentStatus[] {
         return [
             ...this.activeStatuses(),
