@@ -13,6 +13,8 @@ import { RegisterProvider } from './providers/register.provider';
 import { TokenProvider } from './providers/token.provider';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { LocalStrategy } from './strategies/local.strategy';
+import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { GoogleOauth } from './providers/login-google.provider';
 
 @Module({
@@ -35,6 +37,8 @@ import { GoogleOauth } from './providers/login-google.provider';
   providers: [
     AuthService,
     JwtStrategy,
+    LocalStrategy,
+    JwtRefreshStrategy,
     LoginProvider,
     RegisterProvider,
     OtpProvider,

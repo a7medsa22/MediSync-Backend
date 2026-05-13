@@ -9,7 +9,7 @@ import {
   ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { UsersService } from './users.service';
 import { AuthService } from '../auth/auth.service'; // Add this import
@@ -44,6 +44,7 @@ export class UsersController {
     description:
       'Complete user profile with phone, national ID, and role-specific information',
   })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({
     status: 200,
     description: 'Profile completed successfully',
@@ -147,7 +148,7 @@ export class UsersController {
     summary: 'Get User Registration Status',
     description: 'Check the registration progress for a specific user',
   })
-  @ApiQuery({ name: 'userId', required: true, type: String })
+  @ApiQuery({ name: 'userId', required: true, type: String, format: 'uuid' })
   @ApiResponse({
     status: 200,
     description: 'Registration status retrieved',

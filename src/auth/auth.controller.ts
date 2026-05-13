@@ -10,6 +10,7 @@ import {
   Get,
   Delete,
   Param,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
@@ -21,11 +22,14 @@ import {
   ResendOtpDto,
   ResetPasswordDto,
   VerifyOtpDto,
+  LoginDto,
 } from './dto/auth.dto';
 import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
+  ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -44,6 +48,7 @@ export class AuthController {
   // REGISTRATION WITH EMAIL VERIFICATION
   // ===============================================
   @Post('register/init')
+  @Public()
   @Throttle({ auth: { limit: 10, ttl: 60000 } }) // 10 attempts per minute
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -79,6 +84,7 @@ export class AuthController {
   }
 
   @Post('register/basic')
+  @Public()
   @Throttle({ auth: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -117,6 +123,7 @@ export class AuthController {
   }
 
   @Post('register/verify-email')
+  @Public()
   @Throttle({ auth: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -153,13 +160,15 @@ export class AuthController {
   // ===============================================
 
   @Post('login')
+  @Public()
   @UseGuards(AuthGuard('local'))
   @Throttle({ auth: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'User login',
-    description: 'aut',
+    description: 'Authenticate user using email and password to receive access and refresh tokens.',
   })
+  @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: 200,
     description: 'Login successful, tokens provided',
@@ -290,6 +299,7 @@ export class AuthController {
   // ===============================================
 
   @Post('forgot-password')
+  @Public()
   @Throttle({ auth: { limit: 3, ttl: 300000 } }) // 3 attempts per 5 minutes
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -321,6 +331,7 @@ export class AuthController {
   }
 
   @Post('verify-reset-otp')
+  @Public()
   @Throttle({ auth: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -359,6 +370,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @Public()
   @Throttle({ auth: { limit: 3, ttl: 60000 } }) // 3 attempts per minute
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -394,6 +406,7 @@ export class AuthController {
   // ===============================================
 
   @Post('resend-otp')
+  @Public()
   @Throttle({ auth: { limit: 3, ttl: 120000 } }) // 3 resend attempts per 2 minutes
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -428,6 +441,7 @@ export class AuthController {
   // ===============================================
 
   @Post('refresh')
+  @Public()
   @UseGuards(RefreshTokenGuard)
   @Throttle({ auth: { limit: 10, ttl: 60000 } }) // 10 refresh attempts per minute
   @HttpCode(HttpStatus.OK)
@@ -435,6 +449,7 @@ export class AuthController {
     summary: 'Refresh access token',
     description: 'Get new access token using valid refresh token',
   })
+  @ApiBearerAuth('JWT-auth')
   @ApiResponse({
     status: 200,
     description: 'Token refreshed successfully',
@@ -463,8 +478,8 @@ export class AuthController {
     description: 'Invalid refresh token',
   })
   async refreshToken(@Req() req) {
-    const { userId, tokenId } = req.user;
-    return this.authService.refreshTokens(userId, tokenId);
+    const { sub, tokenId } = req.user;
+    return this.authService.refreshTokens(sub, tokenId);
   }
 
   @Post('logout')
@@ -490,8 +505,8 @@ export class AuthController {
     status: 401,
     description: 'Unauthorized - Invalid or missing token',
   })
-  async logout(@Request() req) {
-    return this.authService.logout(req.user.id);
+  async logout(@CurrentUser('sub') userId: string) {
+    return this.authService.logout(userId);
   }
 
   // ===============================================
@@ -526,9 +541,12 @@ export class AuthController {
     status: 401,
     description: 'Unauthorized - Invalid or missing token',
   })
-  async changePassword(@Request() req, @Body() body: ChangePasswordDto) {
+  async changePassword(
+    @CurrentUser('sub') userId: string,
+    @Body() body: ChangePasswordDto,
+  ) {
     return this.authService.changePassword(
-      req.user.id,
+      userId,
       body.oldPassword,
       body.newPassword,
     );
@@ -585,6 +603,7 @@ export class AuthController {
       'Revoke a specific session by its token ID for the current user',
   })
   @ApiBearerAuth('JWT-auth')
+  @ApiParam({ name: 'tokenId', type: 'string', format: 'uuid' })
   @ApiResponse({
     status: 200,
     description: 'Session revoked successfully',
@@ -596,7 +615,7 @@ export class AuthController {
     },
   })
   async revokeSession(
-    @Param('tokenId') tokenId: string,
+    @Param('tokenId', ParseUUIDPipe) tokenId: string,
     @CurrentUser('sub') userId: string,
   ) {
     return this.authService.revokeSession(userId, tokenId);

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsNumber, IsNumberString, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsNumber, IsOptional } from 'class-validator';
 
 export class RequestQueryDto {
   @ApiProperty({
@@ -12,7 +12,7 @@ export class RequestQueryDto {
   })
   @IsOptional()
   @IsNumber()
-  @Transform(({ value }) => parseInt(value))
+  @Type(() => Number)
   page?: number = 1;
 
   @ApiProperty({
@@ -24,7 +24,7 @@ export class RequestQueryDto {
   })
   @IsOptional()
   @IsNumber()
-  @Transform(({ value }) => parseInt(value))
+  @Type(() => Number)
   limit?: number = 10;
 
   @ApiProperty({
@@ -35,5 +35,6 @@ export class RequestQueryDto {
     enum: ['PENDING', 'ACCEPTED', 'REJECTED'],
   })
   @IsOptional()
+  @IsEnum(['PENDING', 'ACCEPTED', 'REJECTED'])
   status?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
 }

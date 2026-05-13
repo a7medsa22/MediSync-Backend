@@ -28,7 +28,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message = exceptionResponse.message || exception.message;
       error = exceptionResponse.error || exception.name;
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      // Handle Prisma errors
+      // Handle Prisma known request errors
       switch (exception.code) {
         case 'P2002':
           status = HttpStatus.CONFLICT;
@@ -40,11 +40,23 @@ export class HttpExceptionFilter implements ExceptionFilter {
           message = 'Record not found';
           error = 'Not found';
           break;
+        case 'P2003':
+          status = HttpStatus.BAD_REQUEST;
+          message = 'Foreign key constraint failed';
+          error = 'Constraint error';
+          break;
         default:
           status = HttpStatus.BAD_REQUEST;
-          message = 'Database operation failed';
+          message = `Database error: ${exception.code}`;
           error = 'Database error';
       }
+    } else if (exception instanceof Prisma.PrismaClientValidationError) {
+      status = HttpStatus.BAD_REQUEST;
+      message = 'Invalid data provided to the database';
+      error = 'Validation error';
+    } else if (exception instanceof Error) {
+      message = exception.message;
+      error = exception.name;
     }
 
     // Log error details
@@ -60,6 +72,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message: Array.isArray(message) ? message : [message],
       timestamp: new Date().toISOString(),
       path: request.url,
+      // Include detailed validation messages if available
+      details: Array.isArray(message) ? message : undefined,
     });
   }
 }

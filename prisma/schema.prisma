@@ -7,7 +7,390 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== ENUMS ====================
+model User {
+  id                String         @id @default(uuid())
+  email             String         @unique
+  password          String?
+  firstName         String
+  lastName          String
+  phone             String?
+  nationalId        String?        @unique
+  idCardImage       String?
+  role              UserRole       @default(PATIENT)
+  status            UserStatus
+  rejectionReason   String?
+  isActive          Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  approvedAt        DateTime?
+  approvedBy        String?
+  isProfileComplete Boolean        @default(false)
+  registrationStep  Int            @default(0)
+  authProvider      AuthProvider   @default(LOCAL)
+  profilePhoto      String?
+  providerId        String?
+  timezone          String?        @default("Africa/Cairo")
+  tokens            AuthToken[]
+  doctor            Doctor?
+  sendMessages      Message[]
+  notifications     Notification[]
+  otps              Otp[]
+  patient           Patient?
+
+  @@index([status])
+  @@index([isActive])
+  @@map("users")
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  userId    String
+  code      String
+  type      String
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("otps")
+}
+
+model AuthToken {
+  id         String    @id @default(uuid())
+  userId     String
+  type       TokenType
+  isRevoked  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  tokenHash  String
+  deviceName String?
+  ipAddress  String?
+  userAgent  String?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_tokens")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  message   String
+  type      NotificationType @default(CONNECTION_REQUEST)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  metadata  Json?
+  title     String
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model Patient {
+  id                    String                    @id @default(uuid())
+  userId                String                    @unique
+  dateOfBirth           DateTime?
+  gender                String?
+  address               String?
+  bloodType             String?
+  allergies             String?
+  chronicDiseases       String?
+  city                  String?
+  currentMedications    String?
+  governorate           String?
+  height                Float?
+  phone                 String?
+  profilePhoto          String?
+  weight                Float?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  insuranceNumber       String?
+  insuranceProvider     String?
+  medicalRecords        MedicalRecord[]
+  appointments          Appointment[]
+  connections           DoctorPatientConnection[]
+  followUpRequests      FollowUpRequest[]
+  user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prescriptions         Prescription[]
+  qrTokens              QrToken[]
+
+  @@index([userId])
+  @@map("patients")
+}
+
+model Specialization {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  nameAr      String?
+  description String?
+  doctors     Doctor[]
+
+  @@map("specializations")
+}
+
+model Doctor {
+  id                String                    @id @default(uuid())
+  userId            String                    @unique
+  specializationId  String?
+  licenseNumber     String?                   @unique
+  bio               String?
+  education         String?
+  rating            Float?                    @default(0)
+  reviewCount       Int                       @default(0)
+  yearsOfExperience Int?
+  medicalRecords    MedicalRecord[]
+  appointments      Appointment[]
+  availabilities    DoctorAvailability[]
+  breaks            DoctorBreak[]
+  daysOff           DoctorDayOff[]
+  connections       DoctorPatientConnection[]
+  specialization    Specialization?           @relation(fields: [specializationId], references: [id])
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  followUpRequests  FollowUpRequest[]
+  prescriptions     Prescription[]
+  qrTokens          QrToken[]
+
+  @@map("doctors")
+}
+
+model DoctorPatientConnection {
+  id             String           @id @default(uuid())
+  doctorId       String
+  patientId      String
+  connectionType ConnectionType?
+  status         ConnectionStatus @default(ACTIVE)
+  connectedAt    DateTime         @default(now())
+  lastActivityAt DateTime?
+  unreadCount    Int?
+  lastMessageAt  DateTime?
+  medicalRecords MedicalRecord[]
+  appointments   Appointment[]
+  chat           Chat?
+  doctor         Doctor           @relation(fields: [doctorId], references: [id])
+  patient        Patient          @relation(fields: [patientId], references: [id])
+  prescriptions  Prescription[]
+
+  @@unique([doctorId, patientId])
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([status])
+  @@map("doctor_patient_connections")
+}
+
+model FollowUpRequest {
+  id                String        @id @default(uuid())
+  patientId         String
+  doctorId          String
+  prescriptionImage String
+  status            RequestStatus @default(PENDING)
+  rejectionReason   String?
+  requestDate       DateTime      @default(now())
+  responseDate      DateTime?
+  respondedBy       String?
+  notes             String?
+  doctor            Doctor        @relation(fields: [doctorId], references: [id])
+  patient           Patient       @relation(fields: [patientId], references: [id])
+
+  @@map("follow_up_requests")
+}
+
+model MedicalRecord {
+  id           String                   @id @default(uuid())
+  patientId    String?
+  doctorId     String?
+  connectionId String?
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  title        String
+  description  String?
+  treatment    String?
+  medications  String?
+  uploadedBy   String
+  isVerified   Boolean                  @default(false)
+  notes        String?
+  attachments  Json?
+  recordDate   DateTime                 @default(now())
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  fileType     RecordType
+  connection   DoctorPatientConnection? @relation(fields: [connectionId], references: [id])
+  doctor       Doctor?                  @relation(fields: [doctorId], references: [id])
+  patient      Patient?                 @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([connectionId])
+  @@index([createdAt])
+  @@index([recordDate])
+}
+
+model Prescription {
+  id           String                  @id @default(uuid())
+  connectionId String
+  doctorId     String
+  patientId    String
+  medications  Json
+  prescribedAt DateTime
+  isActive     Boolean                 @default(true)
+  notes        String?
+  updateAt     DateTime
+  connection   DoctorPatientConnection @relation(fields: [connectionId], references: [id])
+  doctor       Doctor                  @relation(fields: [doctorId], references: [id])
+  patient      Patient                 @relation(fields: [patientId], references: [id])
+
+  @@index([isActive])
+  @@index([prescribedAt])
+  @@map("prescriptions")
+}
+
+model QrToken {
+  id        String    @id @default(uuid())
+  doctorId  String
+  token     String    @unique
+  type      String    @default("CONNECTION")
+  expiresAt DateTime
+  isUsed    Boolean   @default(false)
+  usedBy    String?
+  usedAt    DateTime?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient   Patient?  @relation(fields: [usedBy], references: [id])
+
+  @@index([token])
+  @@index([doctorId])
+  @@index([expiresAt])
+  @@map("qr_tokens")
+}
+
+model Chat {
+  id                 String                  @id @default(uuid())
+  connectionId       String                  @unique
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  lastMessageAt      DateTime?
+  lastMessagePreview String?                 @db.VarChar(255)
+  connection         DoctorPatientConnection @relation(fields: [connectionId], references: [id])
+  messages           Message[]
+
+  @@index([connectionId])
+  @@index([lastMessageAt])
+  @@map("chats")
+}
+
+model Message {
+  id           String    @id @default(uuid())
+  chatId       String
+  senderId     String
+  content      String
+  messageType  String    @default("TEXT")
+  isRead       Boolean   @default(false)
+  readAt       DateTime?
+  isDeleted    Boolean   @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  senderAvatar String?
+  senderName   String?
+  senderRole   String?
+  chat         Chat      @relation(fields: [chatId], references: [id])
+  sender       User      @relation(fields: [senderId], references: [id])
+
+  @@index([chatId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@index([isRead])
+  @@map("messages")
+}
+
+model DoctorAvailability {
+  id                    String    @id @default(uuid())
+  doctorId              String
+  dayOfWeek             DayOfWeek
+  startTime             Int
+  endTime               Int
+  slotDuration          Int       @default(30)
+  maxAppointmentsPerDay Int       @default(10)
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  doctor                Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, dayOfWeek, startTime, endTime])
+  @@index([doctorId])
+  @@index([dayOfWeek])
+  @@map("doctor_availability")
+}
+
+model DoctorBreak {
+  id        String    @id @default(uuid())
+  doctorId  String
+  dayOfWeek DayOfWeek
+  startTime Int
+  endTime   Int
+  reason    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([dayOfWeek])
+  @@map("doctor_breaks")
+}
+
+model DoctorDayOff {
+  id        String   @id @default(uuid())
+  doctorId  String
+  date      DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, date])
+  @@index([doctorId])
+  @@map("doctor_days_off")
+}
+
+model Appointment {
+  id                 String                  @id @default(uuid())
+  doctorId           String
+  patientId          String
+  connectionId       String
+  type               AppointmentType         @default(IN_CLINIC)
+  status             AppointmentStatus       @default(PENDING)
+  reason             String?
+  notes              String?
+  startTime          DateTime
+  endTime            DateTime
+  clinicId           String?
+  roomNumber         String?
+  meetingLink        String?
+  isReminderSent24h  Boolean                 @default(false)
+  isReminderSent1h   Boolean                 @default(false)
+  prescriptionId     String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  cancelledAt        DateTime?
+  cancelledBy        String?
+  cancellationReason String?
+  connection         DoctorPatientConnection @relation(fields: [connectionId], references: [id])
+  doctor             Doctor                  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient            Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, startTime])
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([connectionId])
+  @@index([startTime])
+  @@index([status])
+  @@index([status, startTime])
+  @@map("appointments")
+}
 
 enum UserRole {
   PATIENT
@@ -19,10 +402,10 @@ enum UserStatus {
   INIT
   PENDING_EMAIL_VERIFICATION
   EMAIL_VERIFIED
-  PENDING_ADMIN_APPROVAL
   ACTIVE
   INACTIVE
   SUSPENDED
+  PENDING_ADMIN_APPROVAL
 }
 
 enum TokenType {
@@ -31,19 +414,19 @@ enum TokenType {
 }
 
 enum AuthProvider {
-  LOCAL
   EMAIL
   GOOGLE
   FACEBOOK
   APPLE
+  LOCAL
 }
 
 enum NotificationType {
   CONNECTION_REQUEST
   CONNECTION_ACCEPTED
-  NEW_CONNECTION
   QR_SCANNED
   NEW_MESSAGE
+  NEW_CONNECTION
   NEW_CHAT_MESSAGE
   APPOINTMENT_BOOKED
   APPOINTMENT_CONFIRMED
@@ -105,454 +488,4 @@ enum DayOfWeek {
   FRIDAY
   SATURDAY
   SUNDAY
-}
-
-// ==================== CORE MODELS ====================
-
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String?
-  firstName String
-  lastName  String
-  phone     String?
-  role      UserRole @default(PATIENT)
-
-  status            UserStatus
-  isActive          Boolean      @default(false)
-  approvedAt        DateTime?
-  approvedBy        String?
-  rejectionReason   String?
-  isProfileComplete Boolean      @default(false)
-  registrationStep  Int          @default(0)
-  authProvider      AuthProvider @default(LOCAL)
-  providerId        String?
-  profilePhoto      String?
-  timezone          String?      @default("Africa/Cairo")
-
-  nationalId  String? @unique
-  idCardImage String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  patient       Patient?
-  doctor        Doctor?
-  otps          Otp[]
-  tokens        AuthToken[]
-  notifications Notification[]
-  sendMessages  Message[]
-
-  @@index([status])
-  @@index([isActive])
-  @@map("users")
-}
-
-model Otp {
-  id        String   @id @default(uuid())
-  userId    String
-  code      String
-  type      String
-  expiresAt DateTime
-  isUsed    Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("otps")
-}
-
-model AuthToken {
-  id        String    @id @default(uuid())
-  userId    String
-  tokenHash String
-  type      TokenType
-  isRevoked Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  expiresAt DateTime
-
-  userAgent  String?
-  deviceName String?
-  ipAddress  String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("auth_tokens")
-}
-
-model Notification {
-  id        String           @id @default(uuid())
-  userId    String
-  message   String
-  type      NotificationType @default(CONNECTION_REQUEST)
-  title     String
-  metadata  Json?
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([createdAt])
-  @@index([userId, isRead])
-  @@map("notifications")
-}
-
-model Patient {
-  id     String @id @default(uuid())
-  userId String @unique
-
-  profilePhoto String?
-  dateOfBirth  DateTime?
-  gender       String?
-  bloodType    String?
-  height       Float?
-  weight       Float?
-
-  phone       String?
-  address     String?
-  city        String?
-  governorate String?
-
-  allergies             String?
-  chronicDiseases       String?
-  currentMedications    String?
-  emergencyContactName  String?
-  emergencyContactPhone String?
-  insuranceProvider     String?
-  insuranceNumber       String?
-
-  user             User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  connections      DoctorPatientConnection[]
-  followUpRequests FollowUpRequest[]
-  qrTokens         QrToken[]
-  appointments     Appointment[]
-  medicalRecords   MedicalRecord[]
-  prescriptions    Prescription[]
-
-  @@index([userId])
-  @@map("patients")
-}
-
-model Specialization {
-  id          String  @id @default(uuid())
-  name        String  @unique
-  nameAr      String?
-  description String?
-
-  doctors Doctor[]
-
-  @@map("specializations")
-}
-
-model Doctor {
-  id               String  @id @default(uuid())
-  userId           String  @unique
-  specializationId String?
-
-  licenseNumber     String? @unique
-  yearsOfExperience Int?
-  bio               String?
-  rating            Float?  @default(0)
-  reviewCount       Int     @default(0)
-  education         String?
-
-  user             User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialization   Specialization?           @relation(fields: [specializationId], references: [id])
-  qrTokens         QrToken[]
-  connections      DoctorPatientConnection[]
-  followUpRequests FollowUpRequest[]
-  prescriptions    Prescription[]
-  appointments     Appointment[]
-  availabilities   DoctorAvailability[]
-  breaks           DoctorBreak[]
-  daysOff          DoctorDayOff[]
-  medicalRecords   MedicalRecord[]
-
-  @@map("doctors")
-}
-
-model DoctorPatientConnection {
-  id             String           @id @default(uuid())
-  doctorId       String
-  patientId      String
-  connectionType ConnectionType?
-  status         ConnectionStatus @default(ACTIVE)
-
-  connectedAt    DateTime  @default(now())
-  lastActivityAt DateTime?
-  lastMessageAt  DateTime?
-  unreadCount    Int?
-
-  prescriptions  Prescription[]
-  doctor         Doctor          @relation(fields: [doctorId], references: [id])
-  patient        Patient         @relation(fields: [patientId], references: [id])
-  chat           Chat?
-  appointments   Appointment[]
-  medicalRecords MedicalRecord[]
-
-  @@unique([doctorId, patientId])
-  @@index([doctorId])
-  @@index([patientId])
-  @@index([status])
-  @@map("doctor_patient_connections")
-}
-
-model FollowUpRequest {
-  id        String @id @default(uuid())
-  patientId String
-  doctorId  String
-
-  prescriptionImage String
-  notes             String?
-  status            RequestStatus @default(PENDING)
-  rejectionReason   String?
-
-  requestDate  DateTime  @default(now())
-  responseDate DateTime?
-  respondedBy  String?
-
-  patient Patient @relation(fields: [patientId], references: [id])
-  doctor  Doctor  @relation(fields: [doctorId], references: [id])
-
-  @@map("follow_up_requests")
-}
-
-model MedicalRecord {
-  id           String  @id @default(uuid())
-  patientId    String?
-  doctorId     String?
-  connectionId String? // المتعلق بأي connection
-
-  // File Info
-  fileName String // Original filename
-  fileUrl  String // Storage URL/path
-  fileType RecordType // X_RAY, LAB_RESULT, PRESCRIPTION, etc.
-  fileSize Int // in bytes
-  mimeType String // image/jpeg, application/pdf, etc.
-
-  // Medical Info
-  title       String
-  description String?
-  treatment   String?
-  medications String?
-  uploadedBy  String // USER_ID (patient or doctor)
-  // Status
-  isVerified  Boolean @default(false) // Doctor verified
-  notes       String? // Doctor's notes on the file
-
-  // File attachments
-  attachments Json?
-
-  recordDate DateTime @default(now())
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relations
-  patient    Patient?                 @relation(fields: [patientId], references: [id])
-  doctor     Doctor?                  @relation(fields: [doctorId], references: [id])
-  connection DoctorPatientConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
-
-  @@index([patientId])
-  @@index([doctorId])
-  @@index([connectionId])
-  @@index([createdAt])
-  @@index([recordDate])
-}
-
-model Prescription {
-  id           String @id @default(uuid())
-  connectionId String
-  doctorId     String
-  patientId    String
-  medications  Json // Array of medications
-
-  notes    String?
-  isActive Boolean @default(true)
-
-  prescribedAt DateTime
-  updateAt     DateTime
-
-  //relation
-
-  connection DoctorPatientConnection @relation(fields: [connectionId], references: [id])
-  doctor     Doctor                  @relation(fields: [doctorId], references: [id])
-  patient    Patient                 @relation(fields: [patientId], references: [id])
-
-  @@index([isActive])
-  @@index([prescribedAt])
-  @@map("prescriptions")
-}
-
-model QrToken {
-  id        String    @id @default(uuid())
-  doctorId  String
-  token     String    @unique
-  type      String    @default("CONNECTION")
-  expiresAt DateTime
-  isUsed    Boolean   @default(false)
-  usedBy    String?
-  usedAt    DateTime?
-  metadata  Json?
-  createdAt DateTime  @default(now())
-
-  doctor  Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  patient Patient? @relation(fields: [usedBy], references: [id], onDelete: SetNull)
-
-  @@index([token])
-  @@index([doctorId])
-  @@index([expiresAt])
-  @@map("qr_tokens")
-}
-
-model Chat {
-  id           String @id @default(uuid())
-  connectionId String @unique
-
-  lastMessageAt      DateTime?
-  lastMessagePreview String?   @db.VarChar(255)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  connection DoctorPatientConnection @relation(fields: [connectionId], references: [id])
-  messages   Message[]
-
-  @@index([connectionId])
-  @@index([lastMessageAt])
-  @@map("chats")
-}
-
-model Message {
-  id       String @id @default(uuid())
-  chatId   String
-  senderId String
-
-  content     String @db.Text
-  messageType String @default("TEXT")
-
-  isRead Boolean   @default(false)
-  readAt DateTime?
-
-  senderName   String?
-  senderRole   String?
-  senderAvatar String?
-
-  isDeleted Boolean   @default(false)
-  deletedAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  chat   Chat @relation(fields: [chatId], references: [id])
-  sender User @relation(fields: [senderId], references: [id])
-
-  @@index([chatId])
-  @@index([senderId])
-  @@index([createdAt])
-  @@index([isRead])
-  @@map("messages")
-}
-
-// ==================== PHASE 2 - APPOINTMENT SYSTEM ====================
-
-model DoctorAvailability {
-  id       String @id @default(uuid())
-  doctorId String
-
-  dayOfWeek             DayOfWeek
-  startTime             Int // Minutes since midnight (0-1440)
-  endTime               Int // Minutes since midnight (0-1440)
-  slotDuration          Int       @default(30) // in minutes
-  maxAppointmentsPerDay Int       @default(10)
-
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-
-  @@unique([doctorId, dayOfWeek, startTime, endTime])
-  @@index([doctorId])
-  @@index([dayOfWeek])
-  @@map("doctor_availability")
-}
-
-model DoctorBreak {
-  id       String @id @default(uuid())
-  doctorId String
-
-  dayOfWeek DayOfWeek
-  startTime Int // Minutes since midnight
-  endTime   Int // Minutes since midnight
-  reason    String? // e.g., "Lunch break", "Prayer time"
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-
-  @@index([doctorId])
-  @@index([dayOfWeek])
-  @@map("doctor_breaks")
-}
-
-model DoctorDayOff {
-  id       String @id @default(uuid())
-  doctorId String
-
-  date   DateTime // Specific date when doctor is off
-  reason String? // e.g., "Conference", "Medical Leave"
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-
-  @@unique([doctorId, date])
-  @@index([doctorId])
-  @@map("doctor_days_off")
-}
-
-model Appointment {
-  id           String @id @default(uuid())
-  doctorId     String
-  patientId    String
-  connectionId String
-
-  type   AppointmentType   @default(IN_CLINIC)
-  status AppointmentStatus @default(PENDING)
-  reason String?
-  notes  String?
-
-  startTime DateTime
-  endTime   DateTime
-
-  clinicId    String?
-  roomNumber  String?
-  meetingLink String?
-
-  isReminderSent24h Boolean @default(false)
-  isReminderSent1h  Boolean @default(false)
-
-  prescriptionId String?
-
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  cancelledAt        DateTime?
-  cancelledBy        String?
-  cancellationReason String?
-
-  doctor     Doctor                  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  patient    Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  connection DoctorPatientConnection @relation(fields: [connectionId], references: [id])
-
-  @@unique([doctorId, startTime])
-  @@index([doctorId])
-  @@index([patientId])
-  @@index([connectionId])
-  @@index([startTime])
-  @@index([status])
-  @@index([status, startTime])
-  @@map("appointments")
 }

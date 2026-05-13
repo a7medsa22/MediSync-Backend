@@ -25,22 +25,25 @@ export class RegisterInitDto {
   @IsEnum(userRoleInfo, {
     message: 'Role must be either PATIENT, DOCTOR, or ADMIN',
   })
+  @IsNotEmpty({ message: 'Role is required' })
   role: userRoleInfo;
 }
 
 export class RegisterBasicDto {
   @ApiProperty({ example: 'uuid-from-init-step' })
   @IsUUID(4, { message: 'Invalid temporary user ID format' })
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Temporary user ID is required' })
   tempUserId: string;
 
   @ApiProperty({ example: 'john.doe@example.com' })
   @IsEmail({}, { message: 'Please provide a valid email address' })
+  @IsString()
+  @IsNotEmpty({ message: 'Email is required' })
   email: string;
 
   @ApiProperty({ example: 'SecurePass123!' })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Password is required' })
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   @MaxLength(128, { message: 'Password must not exceed 128 characters' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
@@ -50,7 +53,8 @@ export class RegisterBasicDto {
   password: string;
 
   @ApiProperty({ example: 'SecurePass123!' })
-  @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty({ message: 'Confirm password is required' })
   @PasswordMatch('password', {
     message: 'Password confirmation must match password',
   })
@@ -58,7 +62,7 @@ export class RegisterBasicDto {
 
   @ApiProperty({ example: 'John' })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'First name is required' })
   @MinLength(2, { message: 'First name must be at least 2 characters long' })
   @MaxLength(50, { message: 'First name must not exceed 50 characters' })
   @Matches(/^[a-zA-ZÀ-ÿ\u0600-\u06FF\s]+$/, {
@@ -68,7 +72,7 @@ export class RegisterBasicDto {
 
   @ApiProperty({ example: 'Doe' })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Last name is required' })
   @MinLength(2, { message: 'Last name must be at least 2 characters long' })
   @MaxLength(50, { message: 'Last name must not exceed 50 characters' })
   @Matches(/^[a-zA-ZÀ-ÿ\u0600-\u06FF\s]+$/, {
@@ -78,7 +82,8 @@ export class RegisterBasicDto {
 }
 export class RegisterVerifyEmailDto {
   @ApiProperty({ example: 'uuid-from-basic-step' })
-  @IsUUID()
+  @IsUUID(4, { message: 'Invalid user ID format' })
+  @IsNotEmpty({ message: 'User ID is required' })
   userId: string;
 
   @ApiProperty({
@@ -86,6 +91,7 @@ export class RegisterVerifyEmailDto {
     description: '4-digit verification code sent to email',
   })
   @IsString()
+  @IsNotEmpty({ message: 'OTP is required' })
   @Length(4, 4, { message: 'OTP must be exactly 4 digits' })
   @Matches(/^\d{4}$/, { message: 'OTP must contain only numbers' })
   otp: string;
@@ -97,6 +103,7 @@ export class CompleteProfileDto {
     description: 'Egyptian phone number (mobile or landline)',
   })
   @IsString()
+  @IsNotEmpty({ message: 'Phone number is required' })
   @Matches(/^\+?[1-9]\d{1,14}$/, {
     message: 'Please provide a valid phone number',
   })
@@ -110,6 +117,7 @@ export class CompleteProfileDto {
     description: '14-digit Egyptian National ID',
   })
   @IsString()
+  @IsNotEmpty({ message: 'National ID is required' })
   @IsEgyptianNationalId({
     message: 'Please provide a valid Egyptian National ID',
   })
@@ -167,11 +175,14 @@ export class ChangePasswordDto {
 export class ForgotPasswordDto {
   @ApiProperty({ example: 'john.doe@example.com' })
   @IsEmail({}, { message: 'Please provide a valid email address' })
+  @IsString()
+  @IsNotEmpty({ message: 'Email is required' })
   email: string;
 }
 export class ResetPasswordDto {
   @ApiProperty({ example: 'NewSecurePass456!', minLength: 8 })
   @IsString()
+  @IsNotEmpty({ message: 'New password is required' })
   @MinLength(8, { message: 'New password must be at least 8 characters long' })
   @MaxLength(128, { message: 'New password must not exceed 128 characters' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
@@ -180,7 +191,7 @@ export class ResetPasswordDto {
   })
   newPassword: string;
 
-  @ApiProperty({ example: '123456789012345678901234' })
+  @ApiProperty({ example: 'jwt-reset-token' })
   @IsNotEmpty({ message: 'Reset token is required' })
   @IsString()
   resetToken: string;
@@ -196,23 +207,21 @@ export class RefreshTokenDto {
 export class VerifyOtpDto {
   @ApiProperty({ example: '1259' })
   @IsString()
-  @MinLength(4, { message: 'OTP must be at least 4 digits' })
-  @MaxLength(4, { message: 'OTP must be at most 4 digits' })
+  @IsNotEmpty({ message: 'OTP is required' })
+  @Length(4, 4, { message: 'OTP must be exactly 4 digits' })
   @Matches(/^\d{4}$/, { message: 'OTP must contain only numbers' })
   otp: string;
 
-  @ApiProperty({ example: '123456789012345678901234' })
+  @ApiProperty({ example: 'uuid-string' })
   @IsNotEmpty({ message: 'User ID is required' })
-  @IsString()
+  @IsUUID(4, { message: 'Invalid user ID format' })
   userId: string;
 }
 
-// class LoginDto
-
 export class ResendOtpDto {
-  @ApiProperty({ example: '123456789012345678901234' })
+  @ApiProperty({ example: 'uuid-string' })
   @IsNotEmpty({ message: 'User ID is required' })
-  @IsString()
+  @IsUUID(4, { message: 'Invalid user ID format' })
   userId: string;
 
   @ApiProperty({ example: 'EMAIL_VERIFICATION' })

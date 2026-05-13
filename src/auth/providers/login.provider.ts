@@ -84,8 +84,11 @@ export class LoginProvider {
   }
 
   async logout(userId: string): Promise<{ message: string }> {
-    // 1. حذف refresh token من DB
-    await this.usersService.deactivateUser(userId, userId, true);
+    // Revoke all sessions for the user
+    await this.prisma.authToken.updateMany({
+      where: { userId, isRevoked: false },
+      data: { isRevoked: true },
+    });
     return { message: 'Logged out successfully' };
   }
 

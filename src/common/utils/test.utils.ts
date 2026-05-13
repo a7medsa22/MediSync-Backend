@@ -4,9 +4,9 @@ export class TestUtils {
   }
 
   static generateRandomPhone(): string {
-    const prefixes = ['010', '011', '012', '015'];
+    const prefixes = ['10', '11', '12', '15'];
     const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-    const number = Math.floor(10000000 + Math.random() * 90000000);
+    const number = Math.floor(10000000 + Math.random() * 89999999);
     return `+20${prefix}${number}`;
   }
 

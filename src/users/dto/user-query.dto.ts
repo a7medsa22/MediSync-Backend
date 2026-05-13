@@ -9,19 +9,19 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole, UserStatus } from '@prisma/client';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class UserQueryDto {
-  @ApiProperty({ required: false, default: 1 })
+  @ApiProperty({ required: false, default: 1, type: Number })
   @IsOptional()
   @IsNumber()
-  @Transform(({ value }) => parseInt(value))
+  @Type(() => Number)
   page?: number = 1;
 
-  @ApiProperty({ required: false, default: 10 })
+  @ApiProperty({ required: false, default: 10, type: Number })
   @IsOptional()
   @IsNumber()
-  @Transform(({ value }) => parseInt(value))
+  @Type(() => Number)
   limit?: number = 10;
 
   @ApiProperty({ enum: UserRole, required: false })
@@ -39,15 +39,23 @@ export class UserQueryDto {
   @IsString()
   search?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: Boolean })
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: Boolean })
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
   @IsBoolean()
   isProfileComplete?: boolean;
 }

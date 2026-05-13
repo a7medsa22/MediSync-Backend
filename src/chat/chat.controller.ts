@@ -9,6 +9,7 @@ import {
   BadRequestException,
   Query,
   Put,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ChatService } from './service/chat.service';
 import { MessageService } from './message.service';
@@ -16,7 +17,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { UserRole } from '@prisma/client';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { GetMessagesDto, SendMessageDto } from './dto';
 import { ApiAuth } from 'src/common/decorators/api-auth.decorator';
 import type { AuthUser } from 'src/auth/interfaces/request-with-user.interface';
@@ -40,8 +41,6 @@ export class ChatController {
     status: 200,
     description: 'Conversations retrieved successfully',
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
   async getConversations(@CurrentUser() user: AuthUser) {
     return this.chatService.getUserChats(user.sub, user.role);
   }
@@ -53,15 +52,14 @@ export class ChatController {
     description:
       'Retrieve an existing chat or create a new one if it does not exist',
   })
+  @ApiParam({ name: 'connectionId', type: 'string', format: 'uuid' })
   @ApiResponse({
     status: 200,
     description: 'Chat retrieved or created successfully',
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Connection not found' })
   async getOrCreateChat(
-    @Param('connectionId') connectionId: string,
+    @Param('connectionId', ParseUUIDPipe) connectionId: string,
     @CurrentUser('sub') userId: string,
   ) {
     const chat = await this.chatService.getOrCreateChat(connectionId);
@@ -84,15 +82,14 @@ export class ChatController {
     summary: 'Get chat details',
     description: 'Retrieve details of a specified chat',
   })
+  @ApiParam({ name: 'chatId', type: 'string', format: 'uuid' })
   @ApiResponse({
     status: 200,
     description: 'Chat details retrieved successfully',
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Chat not found' })
   async getChatDetails(
-    @Param('chatId') chatId: string,
+    @Param('chatId', ParseUUIDPipe) chatId: string,
     @CurrentUser('sub') userId: string,
   ) {
     return this.chatService.getChatDetails(chatId, userId);

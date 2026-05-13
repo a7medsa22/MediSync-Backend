@@ -28,6 +28,7 @@ export class MedicationDto {
 
   @ApiProperty({
     example: 3,
+    type: Number,
     description: 'Number of times to take medication',
   })
   @IsNumber()

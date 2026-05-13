@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import helmet from 'helmet';
 import compression from 'compression';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe, VersioningType, HttpStatus } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -12,6 +12,20 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
+
+  // Global Method Not Allowed Handler
+  app.use((req, res, next) => {
+    const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
+    if (!allowedMethods.includes(req.method)) {
+      return res.status(HttpStatus.METHOD_NOT_ALLOWED).json({
+        success: false,
+        statusCode: HttpStatus.METHOD_NOT_ALLOWED,
+        error: 'Method Not Allowed',
+        message: [`Method ${req.method} is not supported`],
+      });
+    }
+    next();
+  });
 
   // Security
   app.use(helmet());
@@ -76,8 +90,8 @@ async function bootstrap() {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          name: 'JWT',
-          description: 'Enter JWT token',
+          name: 'Authorization',
+          description: 'Enter JWT token (format: Bearer <token>)',
           in: 'header',
         },
         'JWT-auth',

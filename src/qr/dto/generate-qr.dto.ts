@@ -52,7 +52,7 @@ export class ScanQrAndValidateDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(/^MDS_[a-f0-9-]{36}_[a-zA-Z0-9]{32}$/, {
+  @Matches(/^MDS_+[a-f0-9-]{36}_[a-zA-Z0-9_-]{32}$/, {
     message: 'Invalid QR token format',
   })
   token: string;

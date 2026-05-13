@@ -98,7 +98,7 @@ export class TokenProvider {
     }
 
     return {
-      userId,
+      sub: userId,
       tokenId,
     };
   }

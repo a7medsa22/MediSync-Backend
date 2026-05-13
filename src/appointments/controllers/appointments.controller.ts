@@ -34,6 +34,7 @@ export class AppointmentsController {
     summary: 'Book appointment',
     description: 'Create a new appointment booking for a patient with a doctor at an available time slot.',
   })
+  @ApiQuery({ name: 'patientId', required: true, type: String, description: 'ID of the patient booking the appointment' })
   @ApiBody({
     type: CreateAppointmentDto,
     examples: {

@@ -1,26 +1,33 @@
-import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength, IsArray, ValidateNested } from 'class-validator';
 import { DayOfWeek } from '@prisma/client';
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateAvailabilityDto {
+  @ApiProperty({ enum: DayOfWeek })
   @IsEnum(DayOfWeek)
   dayOfWeek!: DayOfWeek;
 
+  @ApiProperty({ example: 480, description: 'Start time in minutes from midnight' })
   @IsInt()
   @Min(0)
   @Max(1440)
   startTime!: number; // minutes from midnight
 
+  @ApiProperty({ example: 1020, description: 'End time in minutes from midnight' })
   @IsInt()
   @Min(0)
   @Max(1440)
   endTime!: number; // minutes from midnight
 
+  @ApiProperty({ required: false, example: 30 })
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(480) // max 8 hours
   slotDuration?: number;
 
+  @ApiProperty({ required: false, example: 10 })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -29,32 +36,41 @@ export class CreateAvailabilityDto {
 }
 
 export class CreateMultipleAvailabilitiesDto {
+  @ApiProperty({ type: [CreateAvailabilityDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateAvailabilityDto)
   availabilities!: CreateAvailabilityDto[];
 }
 
 export class UpdateAvailabilityDto {
+  @ApiProperty({ enum: DayOfWeek, required: false })
   @IsOptional()
   @IsEnum(DayOfWeek)
   dayOfWeek?: DayOfWeek;
 
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1440)
   startTime?: number;
 
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1440)
   endTime?: number;
 
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(480)
   slotDuration?: number;
 
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -63,19 +79,23 @@ export class UpdateAvailabilityDto {
 }
 
 export class CreateBreakDto {
+  @ApiProperty({ enum: DayOfWeek })
   @IsEnum(DayOfWeek)
   dayOfWeek!: DayOfWeek;
 
+  @ApiProperty({ example: 720 })
   @IsInt()
   @Min(0)
   @Max(1440)
   startTime!: number;
 
+  @ApiProperty({ example: 780 })
   @IsInt()
   @Min(0)
   @Max(1440)
   endTime!: number;
 
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   @MinLength(1)
@@ -84,22 +104,26 @@ export class CreateBreakDto {
 }
 
 export class UpdateBreakDto {
+  @ApiProperty({ enum: DayOfWeek, required: false })
   @IsOptional()
   @IsEnum(DayOfWeek)
   dayOfWeek?: DayOfWeek;
 
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1440)
   startTime?: number;
 
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1440)
   endTime?: number;
 
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   @MinLength(1)

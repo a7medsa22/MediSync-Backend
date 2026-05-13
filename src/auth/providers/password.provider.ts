@@ -114,6 +114,7 @@ export class PasswordProvider {
         authProvider: true,
         isActive: true,
         status: true,
+        isProfileComplete: true,
         patient: { select: { id: true } },
         doctor: {
           select: { id: true, specialization: true },
@@ -128,7 +129,10 @@ export class PasswordProvider {
 
     const match = await bcrypt.compare(password, user.password);
 
-    if (!match) throw new UnauthorizedException();
+    if (!match) throw new UnauthorizedException('Invalid credentials');
+
+    const { password: _, ...result } = user;
+    return result;
   }
 
   // change password with out OTP

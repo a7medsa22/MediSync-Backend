@@ -24,7 +24,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
       if (!user) throw new UnauthorizedException('User not found or inactive');
 
-      return payload;
+      // Debugging: make sure role/status exist on the final request.user used by guards.
+      // eslint-disable-next-line no-console
+      console.log(
+        '🧠 JwtStrategy validate payload.role=',
+        payload.role,
+        'payload.status=',
+        payload.status,
+        'validatedUser.role=',
+        user?.role,
+        'validatedUser.status=',
+        user?.status,
+      );
+
+      // Passport will attach this object to req.user.
+      // RolesGuard + ApprovedUserGuard rely on `req.user.role` and `req.user.status`.
+      return { ...payload, ...user };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;

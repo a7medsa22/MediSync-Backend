@@ -26,7 +26,19 @@ export class OwnershipGuard implements CanActivate {
 
     const resourceOwnerId = request.params[paramKey];
 
-    if (!user || !resourceOwnerId) {
+    // If it's a public route and we don't have a user, we can't check ownership
+    // but we should allow it if the developer marked it as @Public()
+    // This is common during registration steps
+    if (!user) {
+      const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+      if (isPublic) return true;
+      throw new ForbiddenException('Access denied');
+    }
+
+    if (!resourceOwnerId) {
       throw new ForbiddenException('Access denied');
     }
 

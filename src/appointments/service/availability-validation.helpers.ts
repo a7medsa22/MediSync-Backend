@@ -1,8 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DayOfWeek } from '@prisma/client';
 import { TimeUtils } from '../../common/utils/time.utils';
 
+@Injectable()
 export class AvailabilityValidationHelpers {
   constructor(private prisma: PrismaService) {}
 
