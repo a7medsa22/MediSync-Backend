@@ -13,6 +13,9 @@ import { QrModule } from './qr/qr.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
 import { CacheModule } from './common/cache/cache.module';
+import { RedisModule } from './common/redis/redis.module';
+import { RedisLockModule } from './common/redis-lock/redis-lock.module';
+import { RedisPubSubModule } from './common/redis-pubsub/redis-pubsub.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
@@ -53,6 +56,10 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       ],
     }),
 
+    // Redis Infrastructure
+    RedisModule,
+    RedisLockModule,
+    RedisPubSubModule,
     CacheModule,
     PrismaModule,
     ConfigModule,

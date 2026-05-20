@@ -1,12 +1,31 @@
 import { Global, Module } from '@nestjs/common';
-import { RedisService } from './redis.service';
 import { UserCacheService } from './user-cache.service';
+import { AppointmentCacheService } from './appointment-cache.service';
+import { NotificationCacheService } from './notification-cache.service';
+import { SpecializationCacheService } from './specialization-cache.service';
+import { AnalyticsCacheService } from './analytics-cache.service';
+import { PrescriptionCacheService } from './prescription-cache.service';
 import { PrismaModule } from 'src/prisma/prisma.module';
+import { RedisModule } from '../redis/redis.module';
 
 @Global()
 @Module({
-  imports: [PrismaModule],
-  providers: [RedisService, UserCacheService],
-  exports: [RedisService, UserCacheService],
+  imports: [PrismaModule, RedisModule],
+  providers: [
+    UserCacheService,
+    AppointmentCacheService,
+    NotificationCacheService,
+    SpecializationCacheService,
+    AnalyticsCacheService,
+    PrescriptionCacheService,
+  ],
+  exports: [
+    UserCacheService,
+    AppointmentCacheService,
+    NotificationCacheService,
+    SpecializationCacheService,
+    AnalyticsCacheService,
+    PrescriptionCacheService,
+  ],
 })
 export class CacheModule {}

@@ -1,21 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { RedisService } from './redis.service';
+import { RedisService } from '../redis/redis.service';
+import { CacheKeys } from './cache-keys.util';
 
 @Injectable()
 export class UserCacheService {
-  private readonly PREFIX = 'user:snapshot:';
-  private readonly TTL_SECONDS = 60 * 60 * 24; // 24 hours
+  private readonly TTL = 3600; // 1 hour
 
   constructor(
-    private prisma: PrismaService,
-    private redis: RedisService,
-  ) { }
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
 
+  /**
+   * Business-oriented method to get a user snapshot.
+   * Encapsulates cache keys and data fetching logic.
+   */
   async getUserSnapshot(userId: string) {
-    const key = `${this.PREFIX}${userId}`;
+    const key = CacheKeys.user.snapshot(userId);
 
-    // 1. Try cache first
+    // 1. Try cache
     const cached = await this.redis.get<{
       id: string;
       firstName: string;
@@ -25,7 +29,7 @@ export class UserCacheService {
 
     if (cached) return cached;
 
-    // 2. Not cached → fetch from DB
+    // 2. Fetch from DB
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -38,14 +42,20 @@ export class UserCacheService {
 
     if (!user) return null;
 
-    // 3. Store in cache
-    await this.redis.set(key, user, this.TTL_SECONDS);
+    // 3. Cache results
+    await this.redis.set(key, user, this.TTL);
 
     return user;
   }
 
-  async invalidateUserSnapshot(userId: string) {
-    const key = `${this.PREFIX}${userId}`;
-    await this.redis.del(key);
+  /**
+   * Invalidate user cache when data changes
+   */
+  async invalidateUser(userId: string) {
+    const keys = [
+      CacheKeys.user.snapshot(userId),
+      CacheKeys.user.profile(userId),
+    ];
+    await this.redis.del(...keys);
   }
 }

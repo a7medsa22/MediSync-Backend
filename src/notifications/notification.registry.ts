@@ -43,6 +43,9 @@ export const notificationRegistry = {
     [NotificationsType.NEW_PRESCRIPTION]:
         new PrescriptionHandler(),
 
+    [NotificationsType.PRESCRIPTION_CANCELLED]:
+        new PrescriptionHandler(),
+
     [NotificationsType.QR_SCANNED]:
         new SystemHandler(),
 

@@ -1,4 +1,3 @@
-import { PartialType } from '@nestjs/swagger';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
@@ -40,4 +39,12 @@ export class UpdatePrescriptionDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+  @ApiProperty({
+    example: '2024-12-31T23:59:59Z',
+    required: false,
+    description: 'Date and time when the prescription expires',
+  })
+  @IsOptional()
+  @IsString()
+  expiresAt?: string; // ISO datetime
 }

@@ -22,6 +22,15 @@ export class PrescriptionHandler implements NotificationHandler {
                         actionUrl: data.actionUrl,
                     },
                 };
+            case T.PRESCRIPTION_CANCELLED:
+                return {
+                    title: 'Prescription Cancelled',
+                    message: `Dr. ${data.doctorName} has cancelled your prescription for ${data.medicationName || 'medication'}. Reason: ${data.reason}`,
+                    metadata: {
+                        prescriptionId: data.prescriptionId,
+                        reason: data.reason,
+                    },
+                };
             default:
                 return {
                     title: 'Prescription Notification',

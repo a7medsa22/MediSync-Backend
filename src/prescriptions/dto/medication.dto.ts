@@ -1,62 +1,53 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import {
-  IsEnum,
-  IsNumber,
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
 export class MedicationDto {
-  @ApiProperty({
-    example: 'Ibuprofen',
-    required: true,
-    description: 'Name of the medication',
-  })
   @IsString()
-  name: string;
-
-  @ApiProperty({
-    example: '500mg',
-    required: true,
-    description: 'Dosage (e.g., 500mg, 10ml, 1 tablet)',
-  })
+  @MaxLength(255)
+  @Min(2)
+  @ApiProperty({ description: 'Name of the medication', example: 'Amoxicillin' })
+  drugName!: string;
+ 
   @IsString()
-  dosage: string;
-
-  @ApiProperty({
-    example: 3,
-    type: Number,
-    description: 'Number of times to take medication',
-  })
-  @IsNumber()
+  @ApiProperty({ description: 'Dosage of the medication', example: '500mg' })
+  dosage!: string; // e.g., "500mg"
+ 
+  @IsString()
   @Min(1)
   @Max(24)
-  frequency: number;
-
-  @ApiProperty({
-    example: 'daily',
-    enum: ['daily', 'weekly'],
-    description: 'Frequency type',
-  })
-  @IsEnum(['daily', 'weekly'])
-  frequencyType: 'daily' | 'weekly';
-
-  @ApiProperty({
-    example: '7 days',
-    description: 'Duration of treatment',
-  })
+  @ApiProperty({ description: 'Frequency of intake', example: '3 times daily' })
+  frequency!: string; // e.g., "3 times daily"
+ 
   @IsString()
-  duration: string;
-
-  @ApiProperty({
-    example: 'Take after meals with plenty of water',
-    required: false,
-    description: 'Additional notes about this medication',
-  })
+  @Min(1)
+  @Max(30)
+  @ApiProperty({ description: 'Duration of the medication course', example: '7 days' })
+  duration!: string; // e.g., "7 days"
+ 
   @IsOptional()
   @IsString()
-  notes?: string;
+  @ApiProperty({ description: 'Additional instructions for the medication', example: 'Take after meals' })
+  instructions?: string; // e.g., "After meals"
+ 
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ description: 'Side effects of the medication', example: 'Nausea' })
+  sideEffects?: string;
+ 
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ description: 'Warnings for the medication', example: 'Avoid if allergic to penicillin' })
+  warnings?: string;
 }
+ 
+export class MedicationResponseDto extends MedicationDto {
+  id!: string;
+}
+ 

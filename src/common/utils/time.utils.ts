@@ -130,6 +130,7 @@ export class TimeUtils {
     result.setDate(result.getDate() + days);
     return result;
   }
+  
 
   /**
    * Check if date is in the past (before today)
