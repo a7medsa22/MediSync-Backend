@@ -45,9 +45,11 @@ describe('QR Flow (Integration)', () => {
         })
         .expect(201);
 
-      expect(response.body.data).toBeDefined();
+      // TransformInterceptor wraps response: { success, statusCode, message, data, timestamp }
+      // Service returns { data: { token, qrCodeImage, ... }, message: '...' }
+      // Interceptor extracts .data, so response.body.data = { token, qrCodeImage, ... }
       expect(response.body.data.token).toBeDefined();
-      expect(response.body.data.qrCodeImage).toBeDefined(); // base64 qr image (actual DTO field name)
+      expect(response.body.data.qrCodeImage).toBeDefined();
       qrToken = response.body.data.token;
     });
 
@@ -60,11 +62,13 @@ describe('QR Flow (Integration)', () => {
         })
         .expect(200);
 
-      expect(response.body.valid).toBe(true);
-      expect(response.body.message).toBe('QR Code is valid');
-      expect(response.body.expiresAt).toBeDefined();
-      expect(typeof response.body.remainingMinutes).toBe('number');
-      expect(response.body.remainingMinutes).toBeGreaterThanOrEqual(0);
+      // Service returns { valid: true, message: '...', expiresAt: '...', remainingMinutes: number }
+      // Interceptor passes through since there's no .data property
+      expect(response.body.data.valid).toBe(true);
+      expect(response.body.data.message).toBe('QR Code is valid');
+      expect(response.body.data.expiresAt).toBeDefined();
+      expect(typeof response.body.data.remainingMinutes).toBe('number');
+      expect(response.body.data.remainingMinutes).toBeGreaterThanOrEqual(0);
 
       // Ensure token is NOT used by "validate"
       const tokenRow = await prisma.qrToken.findUnique({ where: { token: qrToken } });
@@ -81,12 +85,14 @@ describe('QR Flow (Integration)', () => {
         })
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      
+      // Service returns { success: true, ... }
+      // Interceptor passes through since there's no .data property
+      expect(response.body.data.success).toBe(true);
+
       // Verify connection created
       const doctorProfile = await prisma.doctor.findUnique({ where: { userId: doctor.id } });
       const patientProfile = await prisma.patient.findUnique({ where: { userId: patient.id } });
-      
+
       const connection = await prisma.doctorPatientConnection.findFirst({
         where: { doctorId: doctorProfile?.id, patientId: patientProfile?.id },
       });

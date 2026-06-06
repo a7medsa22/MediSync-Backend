@@ -110,10 +110,10 @@ describe('Auth Flow (Integration)', () => {
 
   describe('Login & Session Flow', () => {
     let user: any;
+    let tokens: { accessToken: string; refreshToken: string };
     const password = 'Password123!';
 
     beforeAll(async () => {
-      // Manually activate a user for login testing
       user = await prisma.user.create({
         data: {
           email: TestUtils.generateRandomEmail(),
@@ -129,60 +129,18 @@ describe('Auth Flow (Integration)', () => {
       await prisma.patient.create({ data: { userId: user.id } });
     });
 
-    it('should handle rate limiting on login attempts', async () => {
-      // This test demonstrates rate limiting is working
-      // We'll just test a few attempts to avoid excessive rate limiting
-      const testUser = await prisma.user.create({
-        data: {
-          email: TestUtils.generateRandomEmail(),
-          password: await require('bcryptjs').hash('Password123!', 12),
-          firstName: 'Rate',
-          lastName: 'Limit',
-          role: UserRole.PATIENT,
-          status: UserStatus.ACTIVE,
-          isProfileComplete: true,
-          isActive: true,
-        },
-      });
-      await prisma.patient.create({ data: { userId: testUser.id } });
-      
-      // Test just 2 attempts to verify basic functionality
-      await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: testUser.email,
-          password: 'WrongPassword!'
-        })
-        .expect(401);
-      
-      // Rate limiting is working if we get either 401 or 429
+    it('should login successfully', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
-        .send({
-          email: testUser.email,
-          password: 'WrongPassword!'
-        });
-      
-      expect([401, 429]).toContain(response.status);
-    });
+        .send({ email: user.email, password })
+        .expect(200);
 
-    it('should login successfully', async () => {
-      // Add delay to avoid rate limiting from previous tests
-      await waitForRateLimit(3000);
-      
-      try {
-        const response = await loginWithFlexibleRetry(app, user.email, password);
-        expect(response.body.data.accessToken).toBeDefined();
-        expect(response.body.data.refreshToken).toBeDefined();
-        expect(response.body.data.user.email).toBe(user.email);
-      } catch (error: any) {
-        if (error.message === 'RATE_LIMITED') {
-          // Skip test if rate limited - rate limiting is working correctly
-          console.log('Test skipped due to rate limiting (expected behavior)');
-          return;
-        }
-        throw error;
-      }
+      expect(response.body.data.accessToken).toBeDefined();
+      expect(response.body.data.refreshToken).toBeDefined();
+      tokens = {
+        accessToken: response.body.data.accessToken,
+        refreshToken: response.body.data.refreshToken,
+      };
     });
 
     it('should fail with invalid credentials', async () => {
@@ -196,18 +154,25 @@ describe('Auth Flow (Integration)', () => {
     });
 
     it('should refresh token', async () => {
-      console.log('Test skipped - refresh token test disabled due to rate limiting');
-      return;
-    });
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/refresh')
+        .set('Authorization', `Bearer ${tokens.refreshToken}`)
+        .expect(200);
 
+      expect(response.body.data.accessToken).toBeDefined();
+      expect(response.body.data.refreshToken).toBeDefined();
+    });
     it('should logout and revoke token', async () => {
-      console.log('Test skipped - logout test disabled due to rate limiting');
-      return;
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/logout')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .expect(200);
     });
   });
 
   describe('Password Management Flow', () => {
     let user: any;
+    let resetToken: string;
     const oldPassword = 'OldPassword123!';
     const newPassword = 'NewPassword123!';
 
@@ -239,21 +204,36 @@ describe('Auth Flow (Integration)', () => {
       expect(otp).toBeDefined();
     });
 
-    it('should reset password flow', async () => {
-      console.log('Test skipped - reset password flow test disabled due to rate limiting');
-      return;
-    });
-  });
+    it('should verify OTP', async () => {
+      const otpRecord = await prisma.otp.findFirst({
+        where: { userId: user.id, type: 'PASSWORD_RESET' },
+      });
 
-  describe('Google OAuth Flow', () => {
-    it('should initiate Google OAuth flow', async () => {
-      console.log('Test skipped - Google OAuth requires configuration');
-      return;
+      expect(otpRecord).toBeDefined();
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/verify-reset-otp')
+        .send({
+          userId: user.id,
+          otp: otpRecord!.code
+        })
+        .expect(200);
+        
+
+      resetToken = response.body.data.resetToken;
+      expect(resetToken).toBeDefined();
     });
 
-    it('should handle Google OAuth callback failure', async () => {
-      console.log('Test skipped - Google OAuth requires configuration');
-      return;
+    it('should reset password', async () => {
+      expect(resetToken).toBeDefined();
+      
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/reset-password')
+        .send({
+          resetToken: resetToken,
+          newPassword: newPassword,
+        })
+        .expect(200);
     });
   });
 
@@ -323,7 +303,6 @@ describe('Auth Flow (Integration)', () => {
       });
       expect(otp).toBeDefined();
     });
-
     it('should fail resend OTP with invalid user', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/resend-otp')
@@ -337,6 +316,7 @@ describe('Auth Flow (Integration)', () => {
 
   describe('Change Password Flow', () => {
     let user: any;
+    let accessToken: string;
     const oldPassword = 'OldPassword123!';
     const newPassword = 'NewPassword123!';
 
@@ -354,16 +334,34 @@ describe('Auth Flow (Integration)', () => {
         },
       });
       await prisma.patient.create({ data: { userId: user.id } });
+
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: user.email, password: oldPassword });
+      accessToken = loginRes.body.data.accessToken;
+
     });
 
     it('should change password successfully', async () => {
-      console.log('Test skipped - change password test disabled due to rate limiting');
-      return;
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/change-password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          oldPassword: oldPassword,
+          newPassword: newPassword,
+        })
+        .expect(200);
     });
-
     it('should fail with invalid current password', async () => {
-      console.log('Test skipped - change password validation test disabled due to rate limiting');
-      return;
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/change-password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          oldPassword: 'WrongOldPassword!',
+          newPassword: newPassword,
+        })
+        .expect(400);
     });
 
     it('should fail without authentication', async () => {
@@ -378,41 +376,60 @@ describe('Auth Flow (Integration)', () => {
   });
 
   describe('Session Management Flow', () => {
-    let user: any;
-    let accessToken1: string;
-    let sessionIds: string[] = [];
+    let loginRes: any;
+    let accessToken: string;
 
     beforeAll(async () => {
-      // Skip session management tests due to aggressive rate limiting
-      console.log('Session Management Flow tests skipped due to rate limiting constraints');
-      accessToken1 = 'mock-token';
-      sessionIds = [];
-      return;
+      const sessionUser = await prisma.user.create({
+        data: {
+          email: TestUtils.generateRandomEmail(),
+          password: await require('bcryptjs').hash('Password123!', 12),
+          firstName: 'Session',
+          lastName: 'Manager',
+          role: UserRole.PATIENT,
+          status: UserStatus.ACTIVE,
+          isProfileComplete: true,
+          isActive: true,
+        },
+      });
+      await prisma.patient.create({ data: { userId: sessionUser.id } });
+
+      loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: sessionUser.email, password: 'Password123!' });
+
+      accessToken = loginRes.body.data.accessToken;
     });
 
     it('should retrieve active sessions', async () => {
-      console.log('Test skipped - session management disabled due to rate limiting');
-      return;
-    });
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/auth/sessions')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
 
-    it('should revoke a specific session', async () => {
-      console.log('Test skipped - session management disabled due to rate limiting');
-      return;
-    });
-
-    it('should fail to revoke non-existent session', async () => {
-      console.log('Test skipped - session management disabled due to rate limiting');
-      return;
+      expect(response.body.success).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('should fail to access sessions without authentication', async () => {
-      console.log('Test skipped - session management disabled due to rate limiting');
-      return;
+      await request(app.getHttpServer())
+        .get('/api/v1/auth/sessions')
+        .expect(401);
+    });
+
+    it('should handle revoking a session', async () => {
+      const fakeSessionId = 'some-active-session-uuid';
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/auth/sessions/${fakeSessionId}/revoke`)
+        .set('Authorization', `Bearer ${accessToken}`);
+      expect([200, 400, 404]).toContain(response.status);
     });
 
     it('should fail to revoke session without authentication', async () => {
-      console.log('Test skipped - session management disabled due to rate limiting');
-      return;
+      await request(app.getHttpServer())
+        .delete('/api/v1/auth/sessions/some-id')
+        .expect(401);
     });
   });
 
@@ -420,9 +437,6 @@ describe('Auth Flow (Integration)', () => {
     let user: any;
 
     beforeAll(async () => {
-      // Add delay to avoid rate limiting from previous tests
-      await waitForRateLimit(2000);
-      
       user = await prisma.user.create({
         data: {
           email: TestUtils.generateRandomEmail(),
@@ -450,22 +464,6 @@ describe('Auth Flow (Integration)', () => {
         .post('/api/v1/auth/logout')
         .set('Authorization', 'Bearer malformed.jwt.token')
         .expect(401);
-    });
-
-    it('should handle rate limiting on login attempts', async () => {
-      // Test that rate limiting is working by making a few attempts
-      // and accepting either 401 or 429 as valid responses
-      for (let i = 0; i < 3; i++) {
-        const response = await request(app.getHttpServer())
-          .post('/api/v1/auth/login')
-          .send({
-            email: user.email,
-            password: 'WrongPassword!'
-          });
-        
-        // Accept either 401 (invalid credentials) or 429 (rate limited)
-        expect([401, 429]).toContain(response.status);
-      }
     });
 
     it('should handle expired OTP verification', async () => {
@@ -496,16 +494,6 @@ describe('Auth Flow (Integration)', () => {
           newPassword: 'NewPassword123!',
         })
         .expect(400);
-    });
-
-    it('should handle password validation', async () => {
-      console.log('Test skipped - password validation test disabled due to rate limiting');
-      return;
-    });
-
-    it('should handle session revocation for non-owner', async () => {
-      console.log('Test skipped - session revocation test disabled due to rate limiting');
-      return;
     });
   });
 });

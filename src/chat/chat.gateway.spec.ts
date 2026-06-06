@@ -3,7 +3,7 @@ import { ChatGateway } from './chat.gateway';
 import { ChatService } from './service/chat.service';
 import { MessageService } from './message.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
-import { RedisService } from '../common/cache/redis.service';
+import { RedisService } from 'src/common/redis/redis.service';
 import { ActiveUsersService } from './service/active-users.service';
 import { ChatEventsService } from './service/chat-events.service';
 import { JwtService } from '@nestjs/jwt';

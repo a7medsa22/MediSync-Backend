@@ -57,8 +57,10 @@ describe('Chat Flow (Integration)', () => {
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(201);
 
-      expect(response.body.chatId).toBeDefined();
-      chatId = response.body.chatId;
+      // TransformInterceptor wraps response: { success, statusCode, message, data, timestamp }
+      // Service returns { chatId: '...' } (no .data property, so whole object becomes data)
+      expect(response.body.data.chatId).toBeDefined();
+      chatId = response.body.data.chatId;
     });
 
     it('should allow user to send a message', async () => {
@@ -72,8 +74,9 @@ describe('Chat Flow (Integration)', () => {
         })
         .expect(201);
 
-      expect(response.body.content).toBe('Hello Doctor!');
-      expect(response.body.senderId).toBe(patient.id);
+      // Service returns the message object (no .data property)
+      expect(response.body.data.content).toBe('Hello Doctor!');
+      expect(response.body.data.senderId).toBe(patient.id);
     });
 
     it('should allow user to get messages in a chat', async () => {
@@ -82,6 +85,7 @@ describe('Chat Flow (Integration)', () => {
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
+      // Service returns { data: [...] }, interceptor extracts .data
       expect(response.body.data.length).toBeGreaterThan(0);
       expect(response.body.data[0].content).toBe('Hello Doctor!');
     });
@@ -90,7 +94,7 @@ describe('Chat Flow (Integration)', () => {
       const messagesResponse = await request(app.getHttpServer())
         .get(`/api/v1/chat/${chatId}/messages`)
         .set('Authorization', `Bearer ${doctorToken}`);
-      
+
       const messageId = messagesResponse.body.data[0].id;
 
       await request(app.getHttpServer())

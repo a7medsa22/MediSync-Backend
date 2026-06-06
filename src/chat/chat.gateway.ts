@@ -20,7 +20,7 @@ import { Server, Socket } from 'socket.io';
 import { ChatService } from './service/chat.service';
 import { MessageService } from './message.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
-import { RedisService } from '../common/cache/redis.service';
+import { RedisService } from '../common/redis/redis.service';
 import { SendMessageDto } from './dto';
 import { WsJwtGuard } from 'src/auth/guards/ws-Jwt.guard';
 import { ActiveUsersService } from './service/active-users.service';

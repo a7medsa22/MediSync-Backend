@@ -52,6 +52,9 @@ describe('Requests & Connections Flow (Integration)', () => {
         })
         .expect(201);
 
+      // TransformInterceptor wraps response: { success, statusCode, message, data, timestamp }
+      // The service returns { data: { id, status, ... }, message: '...' }
+      // Interceptor extracts .data, so response.body.data = { id, status, ... }
       expect(response.body.data.id).toBeDefined();
       expect(response.body.data.status).toBe(RequestStatus.PENDING);
       requestId = response.body.data.id;
@@ -78,6 +81,8 @@ describe('Requests & Connections Flow (Integration)', () => {
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
+      // Service returns { data: [...] }, wrapped by TransformInterceptor
+      // Interceptor extracts .data, so response.body.data = [...]
       expect(response.body.data.length).toBeGreaterThan(0);
       expect(response.body.data[0].id).toBe(requestId);
     });
@@ -91,11 +96,13 @@ describe('Requests & Connections Flow (Integration)', () => {
         })
         .expect(201);
 
+      // Service returns { data: { id, status, ... } }, wrapped by TransformInterceptor
+      // Interceptor extracts .data, so response.body.data = { id, status, ... }
       expect(response.body.data.status).toBe(RequestStatus.ACCEPTED);
-      
+
       // Verify connection created
       const connection = await prisma.doctorPatientConnection.findFirst({
-        where: { 
+        where: {
           doctorId: (await prisma.doctor.findUnique({ where: { userId: doctor.id } }))?.id,
           patientId: (await prisma.patient.findUnique({ where: { userId: patient.id } }))?.id,
         },
@@ -107,7 +114,7 @@ describe('Requests & Connections Flow (Integration)', () => {
     it('should allow doctor to reject a request', async () => {
       const anotherPatient = await seedPatient(prisma);
       const anotherPatientToken = (await loginAndGetToken(app, anotherPatient.email, anotherPatient.rawPassword)).accessToken;
-      
+
       const doctorProfile = await prisma.doctor.findUnique({
         where: { userId: doctor.id },
       });
@@ -120,7 +127,7 @@ describe('Requests & Connections Flow (Integration)', () => {
           doctorId: doctorProfile?.id,
           prescriptionImage: 'http://example.com/prescription.jpg',
         });
-      
+
       const newRequestId = reqResponse.body.data.id;
 
       await request(app.getHttpServer())
@@ -140,7 +147,7 @@ describe('Requests & Connections Flow (Integration)', () => {
     it('should prevent patient from accepting their own request', async () => {
       const anotherPatient = await seedPatient(prisma);
       const anotherPatientToken = (await loginAndGetToken(app, anotherPatient.email, anotherPatient.rawPassword)).accessToken;
-      
+
       const doctorProfile = await prisma.doctor.findUnique({
         where: { userId: doctor.id },
       });
@@ -152,7 +159,7 @@ describe('Requests & Connections Flow (Integration)', () => {
           doctorId: doctorProfile?.id,
           prescriptionImage: 'http://example.com/prescription.jpg',
         });
-      
+
       const newRequestId = reqResponse.body.data.id;
 
       await request(app.getHttpServer())
@@ -170,6 +177,8 @@ describe('Requests & Connections Flow (Integration)', () => {
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(200);
 
+      // Service returns { data: [...] }, wrapped by TransformInterceptor
+      // Interceptor extracts .data, so response.body.data = [...]
       expect(response.body.data.length).toBeGreaterThan(0);
       expect(response.body.data[0].doctor).toBeDefined();
     });
@@ -180,6 +189,8 @@ describe('Requests & Connections Flow (Integration)', () => {
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
+      // Service returns { data: [...] }, wrapped by TransformInterceptor
+      // Interceptor extracts .data, so response.body.data = [...]
       expect(response.body.data.length).toBeGreaterThan(0);
       expect(response.body.data[0].patient).toBeDefined();
     });

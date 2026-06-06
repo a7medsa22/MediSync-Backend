@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { UserRole, ConnectionStatus } from '@prisma/client';
 import { ChatService } from './chat.service';
-import { RedisService } from 'src/common/cache/redis.service';
+import { RedisService } from 'src/common/redis/redis.service';
 import { connectionSelect } from 'src/common/selects/chat.select';
 
 describe('ChatService', () => {

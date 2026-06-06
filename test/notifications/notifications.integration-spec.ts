@@ -56,6 +56,8 @@ describe('Notifications Flow (Integration)', () => {
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(200);
 
+      // TransformInterceptor wraps response: { success, statusCode, message, data, timestamp }
+      // Service returns { data: [...] }, interceptor extracts .data
       expect(response.body.data.length).toBeGreaterThanOrEqual(2);
       expect(response.body.data[0].userId).toBe(patient.id);
     });
@@ -66,7 +68,8 @@ describe('Notifications Flow (Integration)', () => {
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(200);
 
-      expect(response.body.count).toBeGreaterThanOrEqual(2);
+      // Service returns { count: number } (no .data property, so whole object becomes data)
+      expect(response.body.data.count).toBeGreaterThanOrEqual(2);
     });
 
     it('should allow user to mark a notification as read', async () => {
