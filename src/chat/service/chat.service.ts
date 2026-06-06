@@ -11,7 +11,7 @@ import {
   lastMessageSelect,
 } from 'src/common/selects/chat.select';
 import { ChatDetailsResponseDto } from '../dto';
-import { RedisService } from 'src/common/cache/redis.service';
+import { RedisService } from 'src/common/redis/redis.service';
 import { ChatMapper } from 'src/common/mappers/chat.mapper';
 import { PrismaService } from 'src/prisma/prisma.service';
 

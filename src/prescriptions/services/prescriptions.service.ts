@@ -4,14 +4,14 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { CreatePrescriptionDto, CreatePrescriptionFromTemplateDto } from './dto/create-prescription.dto';
-import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
+import { CreatePrescriptionDto, CreatePrescriptionFromTemplateDto } from '../dto/create-prescription.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PrescriptionAction, PrescriptionStatus, RenewalStatus, UserRole } from '@prisma/client';
 import { TimeUtils } from 'src/common/utils/time.utils';
-import { MedicationDto } from './dto/medication.dto';
+import { MedicationDto } from '../dto/medication.dto';
 import { DrugInteraction, PrescriptionCacheService } from 'src/common/cache/prescription-cache.service';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
@@ -21,37 +21,34 @@ import { UserCacheService } from 'src/common/cache/user-cache.service';
 @Injectable()
 export class PrescriptionsService {
   constructor(
-    private prisma: PrismaService,
-    private eventEmitter: EventEmitter2,
-    private prescriptionCache: PrescriptionCacheService,
-    private userCache: UserCacheService,
-    private configService: ConfigService,
-    private httpService: HttpService,
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly prescriptionCache: PrescriptionCacheService,
+    private readonly userCache: UserCacheService,
+    private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
   ) { }
   private readonly logger = new Logger(PrescriptionsService.name);
 
+
   async createPrescription(
-    doctorId: string,
-    connectionId: string,
+    userId: string,
     dto: CreatePrescriptionDto,
   ) {
-    const connection = await this.validateConnection(connectionId, doctorId);
+    const connection = await this.validateConnection(dto.connectionId, userId);
 
     if (connection.status !== 'ACTIVE') {
       throw new ForbiddenException(
         'You can only prescribe for active connections',
       );
     }
-    // Validate prescription data
     this.validatePrescriptionDates(dto.expiresAt);
-    // Validate medications
     this.validateMedications(dto.medications);
 
-    // 4. Check drug interactions
+    //  Check drug interactions
     const drugNames = dto.medications.map((m) => m.drugName);
     const interactions = await this.checkDrugInteractions(drugNames);
 
-    // If contraindicated, reject
     const contraindicated = interactions.flatMap((i) =>
       i.interactions.filter((int) => int.severity === 'CONTRAINDICATED'),
     );
@@ -63,21 +60,31 @@ export class PrescriptionsService {
       });
     }
 
-    // 5. Create prescription in transaction
+    //  Create prescription in transaction
     const prescription = await this.prisma.$transaction(async (tx) => {
-      // Create prescription
       const p = await tx.prescription.create({
         data: {
-          doctorId,
-          connectionId,
+          doctorId: connection.doctorId,
+          connectionId: connection.id,
           patientId: connection.patientId,
-          medications: JSON.stringify(dto.medications),
+          expireAt: dto.expiresAt,
           notes: dto.notes,
           prescribedAt: new Date(),
           updateAt: new Date(),
+          status: 'ACTIVE',
+          prescriptionMedications: {
+            create: dto.medications.map((m) => ({
+              drugName: m.drugName,
+              dosage: m.dosage,
+              frequency: m.frequency,
+              duration: m.duration,
+              instructions: m.instructions,
+            })),
+          },
         },
         select: {
           id: true,
+          patientId: true,
           doctor: {
             select: {
               user: {
@@ -87,13 +94,21 @@ export class PrescriptionsService {
           },
         },
       });
+      if (dto.templateId) {
+        await tx.prescriptionTemplate.update({
+          where: { id: dto.templateId },
+          data: {
+            usageCount: { increment: 1 },
+          },
+        });
+      }
 
       // Create history entry
       await tx.prescriptionHistory.create({
         data: {
           prescriptionId: p.id,
           newStatus: PrescriptionStatus.ACTIVE,
-          changedBy: doctorId,
+          changedBy: connection.doctorId,
           action: PrescriptionAction.CREATE,
           metadata: { interactions } as any,
         },
@@ -102,13 +117,13 @@ export class PrescriptionsService {
       return p;
     });
 
-    // 6. Invalidate cache
-    await this.userCache.invalidateUser(connection.patientId);
-    await this.prescriptionCache.invalidatePatientPrescriptions(connection.patientId);
+    // Invalidate cache
+    await this.userCache.invalidateUser(prescription.patientId);
+    await this.prescriptionCache.invalidatePatientPrescriptions(prescription.patientId);
 
-    // 7. Notify patient
+    //  Notify patient
     this.eventEmitter.emit('notification.trigger', {
-      userId: connection.patientId,
+      userId: prescription.patientId,
       type: 'NEW_PRESCRIPTION',
       data: {
         prescriptionId: prescription.id,
@@ -127,16 +142,20 @@ export class PrescriptionsService {
   * Create prescription from template
   */
   async createPrescriptionFromTemplate(
-    doctorId: string,
+    userId: string,
     createDto: CreatePrescriptionFromTemplateDto,
   ) {
     // 1. Get template
     const template = await this.prisma.prescriptionTemplate.findUnique({
       where: { id: createDto.templateId },
-      include: { medications: true },
+      include: {
+        medications: true,
+        doctor: { select: { userId: true } },
+      },
     });
 
-    if (!template || template.doctorId !== doctorId) {
+
+    if (!template || template.doctor.userId !== userId) {
       throw new NotFoundException('Template not found');
     }
 
@@ -158,8 +177,8 @@ export class PrescriptionsService {
       ...(createDto.additionalMedications || []),
     ];
 
-    // 3. Reuse createPrescription logic
-    return this.createPrescription(doctorId, createDto.connectionId, {
+    //  Reuse createPrescription logic
+    return this.createPrescription(userId, {
       connectionId: createDto.connectionId,
       medications: allMedications,
       notes: createDto.notes || template.notes || undefined,
@@ -194,8 +213,16 @@ export class PrescriptionsService {
 
     const prescriptions = await this.prisma.prescription.findMany({
       where: { connectionId },
-      include: {
-        ...this.doctorInclude,
+      select: {
+        id: true,
+        status: true,
+        doctor: {
+          select: {
+            user: {
+              select: { firstName: true, lastName: true },
+            },
+          },
+        },
       },
       orderBy: {
         prescribedAt: 'desc',
@@ -204,48 +231,53 @@ export class PrescriptionsService {
     return prescriptions;
   }
   // Get all patient prescriptions (Patient view)
-  async getMyPrescriptions(patientId: string, isActive?: boolean) {
-    const where: any = { patientId };
+  async getMyPrescriptions(patientId: string) {
 
-    if (isActive !== undefined) {
-      where.isActive = isActive;
-    }
+    const cachedData = await this.prescriptionCache.getPatientPrescriptions(patientId);
+    if (cachedData) return cachedData;
+
 
     const prescriptions = await this.prisma.prescription.findMany({
-      where,
+      where: { patientId },
       include: {
-        ...this.doctorInclude,
+        doctor: {
+          select: { user: { select: { firstName: true, lastName: true } } }
+        },
         connection: {
           select: { id: true, status: true },
         },
+
+        prescriptionMedications: {
+          select: { drugName: true, dosage: true }
+        }
       },
       orderBy: {
         prescribedAt: 'desc',
       },
     });
+
+    await this.prescriptionCache.setPatientPrescriptions(patientId, prescriptions);
+
     return prescriptions;
   }
+
   // Get all patient prescriptions (Doctor view)
   async getPatientPrescriptions(doctorId: string, patientId: string) {
-    // 1. Check domain cache first
-    let prescriptions = await this.prescriptionCache.getPatientPrescriptions(patientId);
 
-    if (!prescriptions) {
-      // 2. Verify connection exists
-      const connection = await this.prisma.doctorPatientConnection.findUnique({
-        where: {
-          doctorId_patientId: {
-            doctorId,
-            patientId,
-          },
+    const connection = await this.prisma.doctorPatientConnection.findUnique({
+      where: {
+        doctorId_patientId: {
+          doctorId,
+          patientId,
         },
-      });
+      },
+    });
 
-      if (!connection) {
-        throw new NotFoundException('No active connection found with this patient');
-      }
+    if (!connection)
+      throw new NotFoundException('No active connection found with this patient');
 
-      // 3. Fetch from DB
+    let prescriptions = await this.prescriptionCache.getPatientPrescriptions(patientId);
+    if (!prescriptions) {
       prescriptions = await this.prisma.prescription.findMany({
         where: { patientId },
         include: {
@@ -255,12 +287,9 @@ export class PrescriptionsService {
           prescribedAt: 'desc',
         },
       });
-
-      // 4. Store in domain cache
-      await this.prescriptionCache.cachePatientPrescriptions(patientId, prescriptions);
     }
+    await this.prescriptionCache.cachePatientPrescriptions(patientId, prescriptions);
 
-    // 5. Return structured and filtered results
     return {
       all: prescriptions,
       active: prescriptions.filter((p) => p.status === PrescriptionStatus.ACTIVE),
@@ -272,38 +301,54 @@ export class PrescriptionsService {
       },
     };
   }
+
+
   //Get doctor's prescriptions with statistics
-  async getDoctorPrescriptions(doctorId: string, stats: PrescriptionStatus) {
+  async getDoctorPrescriptions(userId: string, stats?: PrescriptionStatus) {
+    const doctor = await this.prisma.doctor.findUnique({
+      where: { userId },
+      select: { id: true }
+    });
+    if (!doctor)
+      throw new NotFoundException('Doctor profile not found');
+
+    const doctorId = doctor?.id
     const prescriptions = await this.prisma.prescription.findMany({
-      where: { doctorId },
+      where: { doctorId, status: stats },
       include: {
         patient: { select: { user: { select: { firstName: true, lastName: true } } } },
       },
+
       orderBy: { prescribedAt: 'desc' },
     });
+
+    const [activeCount, expiredCount, totalCount] = await Promise.all([
+      this.prisma.prescription.count({ where: { doctorId, status: PrescriptionStatus.ACTIVE } }),
+      this.prisma.prescription.count({ where: { doctorId, status: PrescriptionStatus.EXPIRED } }),
+      this.prisma.prescription.count({ where: { doctorId } }),
+    ]);
+
     return {
-      all: prescriptions,
-      active: prescriptions.filter((p) => p.status === PrescriptionStatus.ACTIVE),
-      expired: prescriptions.filter((p) => p.status === PrescriptionStatus.EXPIRED),
-      pendingRenewals: await this.prisma.prescriptionRenewal.count({
-        where: { status: 'PENDING' },
-      }),
+      data: prescriptions,
       stats: {
-        total: prescriptions.length,
-        activeCount: prescriptions.filter((p) => p.status === PrescriptionStatus.ACTIVE).length,
-      },
+        total: totalCount,
+        active: activeCount,
+        expired: expiredCount,
+      }
     };
   }
   // GET SINGLE PRESCRIPTION
   async getPrescription(
     prescriptionId: string,
     userId: string,
+    userRole: UserRole,
   ) {
     const prescription = await this.prisma.prescription.findUnique({
       where: { id: prescriptionId },
       include: {
-        doctor: { select: { user: { select: { firstName: true, lastName: true } } } },
-        patient: { select: { user: { select: { firstName: true, lastName: true } } } },
+        doctor: { select: { userId: true, user: { select: { firstName: true, lastName: true } } } },
+        patient: { select: { userId: true, user: { select: { firstName: true, lastName: true } } } },
+        prescriptionMedications: true,
         renewals: true,
         history: { orderBy: { changedAt: 'desc' } },
       },
@@ -312,8 +357,12 @@ export class PrescriptionsService {
       throw new NotFoundException('Prescription not found');
     }
     // Authorization
-    if (prescription.doctorId !== userId && prescription.patientId !== userId) {
-      throw new BadRequestException('Unauthorized to view this prescription');
+    const isOwner =
+      prescription.patient.userId === userId ||
+      prescription.doctor.userId === userId;
+
+    if (!isOwner) {
+      throw new ForbiddenException('You do not have permission to view this prescription');
     }
     await this.prisma.prescriptionHistory.create({
       data: {
@@ -322,20 +371,28 @@ export class PrescriptionsService {
         newStatus: prescription.status,
         changedBy: userId,
         action: PrescriptionAction.VIEW,
-        metadata: { userRole: prescription.doctorId === userId ? 'DOCTOR' : 'PATIENT' },
+        metadata: userRole,
       },
     });
     return prescription;
   }
 
   // CANCEL PRESCRIPTION (Doctor only)
-  async cancelPrescription(prescriptionId: string, doctorId: string, reason?: string) {
+  async cancelPrescription(prescriptionId: string, userId: string, reason?: string) {
+    const doctor = await this.prisma.doctor.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!doctor) throw new UnauthorizedException('Doctor profile not found');
+
+    const doctorId = doctor.id;
+
     const prescription = await this.prisma.prescription.findUnique({
       where: { id: prescriptionId },
-      include: {
-        doctor: { select: { user: { select: { firstName: true, lastName: true } } } },
-        patient: { select: { userId: true } }
-      }
+      select: {
+        doctorId: true, status: true, patientId: true,
+        doctor: { select: { user: { select: { firstName: true, lastName: true } } } }
+      },
     });
 
     if (!prescription) {
@@ -358,8 +415,7 @@ export class PrescriptionsService {
       const result = await tx.prescription.update({
         where: { id: prescriptionId },
         data: {
-          status: PrescriptionStatus.CANCELLED,
-          isActive: false,
+          status: 'CANCELLED',
         },
       });
 
@@ -367,7 +423,7 @@ export class PrescriptionsService {
         data: {
           prescriptionId,
           previousStatus: prescription.status,
-          newStatus: PrescriptionStatus.CANCELLED,
+          newStatus: 'CANCELLED',
           changedBy: doctorId,
           action: PrescriptionAction.CANCEL,
           reason,
@@ -386,59 +442,28 @@ export class PrescriptionsService {
 
     // Notify patient
     this.eventEmitter.emit('notification.trigger', {
-      userId: prescription.patient.userId,
+      userId: userId,
       type: 'PRESCRIPTION_CANCELLED',
       data: {
-        prescriptionId: prescription.id,
+        prescriptionId,
         doctorName: `${prescription.doctor.user.firstName} ${prescription.doctor.user.lastName}`,
         reason: reason || 'No reason provided',
-        actionUrl: `/prescriptions/${prescription.id}`,
+        actionUrl: `/prescriptions/${prescriptionId}`,
       },
     });
 
     return updated;
   }
 
-  // ===============================================
   // GET ACTIVE PRESCRIPTIONS COUNT
-  // ===============================================
   async getActivePrescriptionsCount(patientId: string): Promise<number> {
     return this.prisma.prescription.count({
       where: {
         patientId,
-        isActive: true,
+        status: 'ACTIVE',
       },
     });
   }
-
-  private readonly patientInclude = {
-    patient: {
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-    },
-  };
-
-  private readonly doctorInclude = {
-    doctor: {
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        specialization: true,
-      },
-    },
-  };
 
   async checkDrugInteractions(
     drugNames: string[],
@@ -455,27 +480,61 @@ export class PrescriptionsService {
   > {
     const results: DrugInteraction[] = [];
 
+    const labels: { [drugName: string]: string[] } = {};
+
     for (const drugName of drugNames) {
       // 1. Check domain cache first
-      const cached = await this.prescriptionCache.getDrugInteraction(drugName);
-      if (cached) {
-        results.push(cached);
+      const cachedInteraction = await this.prescriptionCache.getDrugInteraction(drugName);
+      if (cachedInteraction) {
+        labels[drugName] = cachedInteraction.interactions.map((i) => i.description);
         continue;
       }
 
       // 2. Fetch from OpenFDA
       const interactions = await this.fetchInteractionsFromOpenFDA(drugName);
 
-      const interactionData = {
+      // 3. Create proper DrugInteraction object for caching
+      const interactionData: DrugInteraction = {
         drugName,
         interactions,
       };
 
-      // 3. Store in domain cache for future requests
+      // 4. Store in domain cache for future requests
       await this.prescriptionCache.cacheDrugInteraction(interactionData);
-      results.push(interactionData);
+      labels[drugName] = interactions.map((i) => i.description);
     }
 
+    for (const currentDrug of drugNames) {
+      const currentDrugInteractions: Array<{
+        drugName: string;
+        severity: 'LOW' | 'MODERATE' | 'HIGH' | 'CONTRAINDICATED';
+        description: string;
+        recommendation: string;
+      }> = [];
+
+      const currentDrugLabels = labels[currentDrug] || [];
+
+      for (const otherDrug of drugNames) {
+        if (currentDrug === otherDrug) continue;
+        for (const textParagraph of currentDrugLabels) {
+          if (textParagraph.toUpperCase().includes(otherDrug.toUpperCase())) {
+            currentDrugInteractions.push({
+              drugName: otherDrug,
+              severity: this.detectSeverity(textParagraph),
+              description: `Interaction detected between ${currentDrug} and ${otherDrug} based on FDA medical labels.`,
+              recommendation: 'Review dosage or consider alternative medications.',
+            });
+            break
+          }
+        }
+      }
+      if (currentDrugInteractions.length > 0) {
+        results.push({
+          drugName: currentDrug,
+          interactions: currentDrugInteractions,
+        });
+      }
+    }
     return results;
   }
 
@@ -513,7 +572,7 @@ export class PrescriptionsService {
         recommendation: 'Consult with a pharmacist or physician for specific details.',
       }));
     } catch (error) {
-      this.logger.error(`OpenFDA error for ${drugName}: ${error.message}`);
+      this.logger.error(`OpenFDA error for ${drugName}: ${error}`);
       return [];
     }
   }
@@ -536,23 +595,21 @@ export class PrescriptionsService {
   }
 
   // ==================== PRIVATE HELPERS ====================
-  private async validateConnection(connectionId: string, doctorId: string) {
-    const connection = await this.prisma.doctorPatientConnection.findUnique({
-      where: { id: connectionId },
+  private async validateConnection(connectionId: string, userId: string) {
+    const connection = await this.prisma.doctorPatientConnection.findFirst({
+      where: {
+        id: connectionId,
+        doctor: { userId }
+      },
       include: {
-        patient: { include: { user: true } },
-        doctor: { include: { user: true } },
+        patient: { select: { id: true, userId: true } },
       },
     });
 
     if (!connection) {
-      throw new NotFoundException('Connection not found');
+      throw new ForbiddenException('Invalid or unauthorized connection');
     }
-    if (connection.doctorId !== doctorId) {
-      throw new ForbiddenException(
-        'You can only prescribe for your own patients',
-      );
-    }
+
     return connection;
   }
 
@@ -580,38 +637,47 @@ export class PrescriptionsService {
     }
     return true;
   }
-  private async validateRenewalEligibility(prescription: any) {
-    if (prescription.status === PrescriptionStatus.EXPIRED) {
-      // Allow renewal within 7 days of expiry
-      const sevenDaysAfterExpiry = TimeUtils.addDays(
-        prescription.expiresAt,
-        7,
-      );
-      if (new Date() > sevenDaysAfterExpiry) {
-        throw new BadRequestException(
-          'Cannot renew prescription more than 7 days after expiry',
-        );
-      }
-    } else if (
-      prescription.status === PrescriptionStatus.CANCELLED) {
-      throw new BadRequestException(
-        `Cannot renew a cancelled prescription`,
-      );
-    }
 
-    // Check renewal count
-    if (prescription.renewalCount >= prescription.maxRenewals) {
-      throw new BadRequestException(
-        `Maximum renewals (${prescription.maxRenewals}) reached`,
-      );
-    }
+  //===================== CRON JOBS ======================
 
-    // Prescription must be at least 7 days old
-    const minAge = TimeUtils.addDays(prescription.prescribedAt, 7);
-    if (new Date() < minAge) {
-      throw new BadRequestException(
-        'Cannot renew prescription within 7 days of creation',
-      );
+  async processExpiredPrescriptions() {
+    await this.prisma.prescription.updateMany({
+      where: { status: 'ACTIVE', expireAt: { lte: new Date() } },
+      data: { status: 'EXPIRED' },
+    });
+  }
+  async sendRenewalReminders() {
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+    const expiring = await this.prisma.prescription.findMany({
+      where: { status: 'ACTIVE', expireAt: { gte: new Date(), lte: threeDaysFromNow } },
+      include: { prescriptionMedications: { take: 1 } }
+    });
+
+    for (const rx of expiring) {
+      this.eventEmitter.emit('notification.trigger', {
+        userId: rx.patientId,
+        type: 'PRESCRIPTION_EXPIRY_REMINDER',
+        data: {
+          prescriptionId: rx.id,
+          medicationName: rx.prescriptionMedications[0]?.drugName || 'medication',
+        },
+      });
     }
+  }
+
+  async cleanupOldPendingRequests() {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    await this.prisma.prescriptionRenewal.updateMany({
+      where: { status: 'PENDING', requestedAt: { lte: sevenDaysAgo } },
+      data: {
+        status: 'REJECTED',
+        rejectionReason: 'Auto-rejected due to no response from the doctor within 7 days.',
+        respondedAt: new Date(),
+      },
+    });
   }
 }

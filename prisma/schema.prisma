@@ -113,9 +113,9 @@ model Patient {
   connections           DoctorPatientConnection[]
   followUpRequests      FollowUpRequest[]
   user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prescriptionRenewals  PrescriptionRenewal[]
   prescriptions         Prescription[]
   qrTokens              QrToken[]
-  prescriptionRenewals  PrescriptionRenewal[]
 
   @@index([userId])
   @@map("patients")
@@ -150,9 +150,9 @@ model Doctor {
   specialization        Specialization?           @relation(fields: [specializationId], references: [id])
   user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   followUpRequests      FollowUpRequest[]
+  prescriptionTemplates PrescriptionTemplate[]
   prescriptions         Prescription[]
   qrTokens              QrToken[]
-  prescriptionTemplates PrescriptionTemplate[]
 
   @@map("doctors")
 }
@@ -231,34 +231,25 @@ model MedicalRecord {
 }
 
 model Prescription {
-  id           String @id @default(uuid())
-  connectionId String
-  doctorId     String
-  patientId    String
-
-  status      PrescriptionStatus @default(ACTIVE)
-  medications Json
-  notes       String?
-  isActive    Boolean            @default(true)
-
-  prescribedAt DateTime  @default(now())
-  updateAt     DateTime  @updatedAt
-  expireAt     DateTime?
-
-  // Renewal tracking
-  parentPrescriptionId String? // Link to previous prescription if renewal
-  renewalCount         Int     @default(0)
-  maxRenewals          Int     @default(3)
-
-  //relations
-
+  id                      String                   @id @default(uuid())
+  connectionId            String
+  doctorId                String
+  patientId               String
+  prescribedAt            DateTime                 @default(now())
+  notes                   String?
+  updateAt                DateTime                 @updatedAt
+  expireAt                DateTime?
+  maxRenewals             Int                      @default(3)
+  parentPrescriptionId    String?
+  renewalCount            Int                      @default(0)
+  status                  PrescriptionStatus       @default(ACTIVE)
+  isRenewal               Boolean                  @default(false)
+  history                 PrescriptionHistory[]
+  prescriptionMedications PrescriptionMedication[]
+  renewals                PrescriptionRenewal[]
   connection              DoctorPatientConnection  @relation(fields: [connectionId], references: [id])
   doctor                  Doctor                   @relation(fields: [doctorId], references: [id])
   patient                 Patient                  @relation(fields: [patientId], references: [id])
-  renewals                PrescriptionRenewal[]
-  history                 PrescriptionHistory[]
-  prescriptionMedications PrescriptionMedication[]
-
 
   @@index([patientId])
   @@index([status])
@@ -267,74 +258,66 @@ model Prescription {
 }
 
 model PrescriptionMedication {
-  id             String @id @default(uuid())
+  id             String       @id @default(uuid())
   prescriptionId String
   drugName       String
   dosage         String
   frequency      String
   duration       String
-
-  instructions String? // "After meals"
-  sideEffects  String?
-  warnings     String?
-
-  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  instructions   String?
+  sideEffects    String?
+  warnings       String?
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id])
 
   @@index([prescriptionId])
   @@map("prescription_medications")
 }
 
 model PrescriptionTemplate {
-  id       String  @id @default(uuid())
-  doctorId String
-  name     String
-  notes    String?
-  isActive Boolean @default(true)
-
-  medications TemplateMedication[]
+  id          String               @id @default(uuid())
+  doctorId    String
+  name        String
+  notes       String?
+  isActive    Boolean              @default(true)
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
-
-  doctor Doctor @relation(fields: [doctorId], references: [id])
+  usageCount  Int                  @default(0)
+  doctor      Doctor               @relation(fields: [doctorId], references: [id])
+  medications TemplateMedication[]
 
   @@index([doctorId])
   @@map("prescription_templates")
 }
 
 model TemplateMedication {
-  id         String @id @default(uuid())
-  templateId String
-  drugName   String
-  dosage     String
-  frequency  String
-  duration   String
-
-  instructions String? // "After meals"
+  id           String               @id @default(uuid())
+  templateId   String
+  drugName     String
+  dosage       String
+  frequency    String
+  duration     String
+  instructions String?
   sideEffects  String?
   warnings     String?
-
-  template PrescriptionTemplate @relation(fields: [templateId], references: [id])
+  template     PrescriptionTemplate @relation(fields: [templateId], references: [id])
 
   @@index([templateId])
   @@map("template_medications")
 }
 
 model PrescriptionRenewal {
-  id             String @id @default(uuid())
-  prescriptionId String
-  patientId      String
-
-  status          RenewalStatus    @default(PENDING) // PENDING, APPROVED, REJECTED
-  requestedAt     DateTime  @default(now())
+  id              String        @id @default(uuid())
+  prescriptionId  String
+  patientId       String
+  status          RenewalStatus @default(PENDING)
+  requestedAt     DateTime      @default(now())
   respondedAt     DateTime?
-  respondedBy     String? // Doctor ID
+  respondedBy     String?
   rejectionReason String?
-
-  renewalCount Int @default(1)
-  maxRenewals  Int @default(3)
-
-  patient      Patient      @relation(fields: [patientId], references: [id])
-  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  renewalCount    Int           @default(1)
+  maxRenewals     Int           @default(3)
+  patient         Patient       @relation(fields: [patientId], references: [id])
+  prescription    Prescription  @relation(fields: [prescriptionId], references: [id])
 
   @@index([prescriptionId])
   @@index([patientId])
@@ -343,19 +326,16 @@ model PrescriptionRenewal {
 }
 
 model PrescriptionHistory {
-  id             String @id @default(uuid())
+  id             String              @id @default(uuid())
   prescriptionId String
-
   previousStatus PrescriptionStatus?
   newStatus      PrescriptionStatus
-  changedBy      String // User ID
+  changedBy      String
   changedAt      DateTime            @default(now())
-
-  action   PrescriptionAction  
-  reason   String?
-  metadata Json? // Drug interactions, refund info, etc.
-
-  prescription Prescription @relation(fields: [prescriptionId], onDelete: Cascade, references: [id])
+  action         PrescriptionAction
+  reason         String?
+  metadata       Json?
+  prescription   Prescription        @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
 
   @@index([prescriptionId])
   @@index([changedAt])
@@ -552,6 +532,8 @@ enum NotificationType {
   PRESCRIPTION_EXPIRY_WARNING
   NEW_PRESCRIPTION
   PRESCRIPTION_CANCELLED
+  PRESCRIPTION_RENEWAL_APPROVED
+  PRESCRIPTION_RENEWAL_REJECTED
 }
 
 enum ConnectionStatus {
@@ -611,15 +593,17 @@ enum PrescriptionStatus {
   EXPIRED
   CANCELLED
 }
+
 enum RenewalStatus {
   PENDING
   APPROVED
   REJECTED
 }
+
 enum PrescriptionAction {
-  VIEW
   CREATE
   RENEW
   EXPIRE
   CANCEL
+  VIEW
 }

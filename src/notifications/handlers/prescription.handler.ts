@@ -31,6 +31,32 @@ export class PrescriptionHandler implements NotificationHandler {
                         reason: data.reason,
                     },
                 };
+            case T.PRESCRIPTION_RENEWAL_APPROVED:
+                return {
+                    title: 'Renewal Approved',
+                    message: `Dr. ${data.doctorName} has approved your renewal request for ${data.medicationName || 'medication'}.`,
+                    metadata: {
+                        prescriptionId: data.prescriptionId,
+                    },
+                };
+            case T.PRESCRIPTION_RENEWAL_REJECTED:
+                return {
+                    title: 'Renewal Rejected',
+                    message: `Dr. ${data.doctorName} has rejected your renewal request. Reason: ${data.reason}`,
+                    metadata: {
+                        prescriptionId: data.prescriptionId,
+                        reason: data.reason,
+                    },
+                };
+            case T.PRESCRIPTION_EXPIRY_REMINDER:
+                return {
+                    title: 'Prescription Expiry Reminder',
+                    message: `Your prescription for ${data.medicationName} is expiring on ${data.expiryDate}. Please contact your doctor for renewal if needed.`,
+                    metadata: {
+                        prescriptionId: data.prescriptionId,
+                        expiryDate: data.expiryDate,
+                    },
+                };
             default:
                 return {
                     title: 'Prescription Notification',

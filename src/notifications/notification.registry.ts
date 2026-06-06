@@ -46,6 +46,12 @@ export const notificationRegistry = {
     [NotificationsType.PRESCRIPTION_CANCELLED]:
         new PrescriptionHandler(),
 
+    [NotificationsType.PRESCRIPTION_RENEWAL_APPROVED]:
+        new PrescriptionHandler(),
+
+    [NotificationsType.PRESCRIPTION_RENEWAL_REJECTED]:
+        new PrescriptionHandler(),
+
     [NotificationsType.QR_SCANNED]:
         new SystemHandler(),
 

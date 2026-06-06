@@ -32,6 +32,7 @@ export const CacheKeys = {
   prescription: {
     interaction: (drugName: string) => `prescription:interaction:${drugName.toLowerCase()}`,
     patientList: (patientId: string) => `prescription:list:patient:${patientId}`,
+    templateList: (doctorId: string) => `prescription:templates:dr:${doctorId}`,
   },
 
   // Analytics domain

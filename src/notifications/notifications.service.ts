@@ -114,7 +114,6 @@ export class NotificationsService {
   }
 
   // --- Event Listeners (Decoupling) ---
-  // دلوقتي الموديلات التانية بس بـ "ترمي" Event والخدمة دي بتلقطه وتنفذه
 
   // Backward-compatible listener used by unit tests
   async handleConnectionAccepted(payload: {
