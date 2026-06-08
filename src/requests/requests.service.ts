@@ -220,13 +220,18 @@ export class RequestsService {
   }
 
   async getConnectedPatients(doctorId: string, dto: RequestQueryDto) {
+    const doctor = await this.prisma.doctor.findUnique({
+      where: { userId: doctorId },
+    });
+    if (!doctor) return { connections: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } };
+
     const { page = 1, limit = 10 } = dto;
     const skip = (page - 1) * limit;
 
     const [connections, total] = await Promise.all([
       this.prisma.doctorPatientConnection.findMany({
         where: {
-          doctorId,
+          doctorId: doctor.id,
           status: 'ACTIVE',
         },
         include: { ...this.patientInclude },
@@ -235,7 +240,7 @@ export class RequestsService {
         orderBy: { lastActivityAt: 'desc' },
       }),
       this.prisma.doctorPatientConnection.count({
-        where: { doctorId, status: 'ACTIVE' },
+        where: { doctorId: doctor.id, status: 'ACTIVE' },
       }),
     ]);
 
@@ -246,9 +251,14 @@ export class RequestsService {
   }
 
   async getConnectedDoctors(patientId: string) {
+    const patient = await this.prisma.patient.findUnique({
+      where: { userId: patientId },
+    });
+    if (!patient) return [];
+
     return this.prisma.doctorPatientConnection.findMany({
       where: {
-        patientId,
+        patientId: patient.id,
         status: 'ACTIVE',
       },
       include: { ...this.doctorInclude },

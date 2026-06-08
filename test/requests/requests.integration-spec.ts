@@ -52,12 +52,9 @@ describe('Requests & Connections Flow (Integration)', () => {
         })
         .expect(201);
 
-      // TransformInterceptor wraps response: { success, statusCode, message, data, timestamp }
-      // The service returns { data: { id, status, ... }, message: '...' }
-      // Interceptor extracts .data, so response.body.data = { id, status, ... }
-      expect(response.body.data.id).toBeDefined();
-      expect(response.body.data.status).toBe(RequestStatus.PENDING);
-      requestId = response.body.data.id;
+      expect(response.body.data.request.id).toBeDefined();
+      expect(response.body.data.request.status).toBe(RequestStatus.PENDING);
+      requestId = response.body.data.request.id;
     });
 
     it('should prevent duplicate requests', async () => {
@@ -81,10 +78,8 @@ describe('Requests & Connections Flow (Integration)', () => {
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
-      // Service returns { data: [...] }, wrapped by TransformInterceptor
-      // Interceptor extracts .data, so response.body.data = [...]
-      expect(response.body.data.length).toBeGreaterThan(0);
-      expect(response.body.data[0].id).toBe(requestId);
+      expect(response.body.data.requests.length).toBeGreaterThan(0);
+      expect(response.body.data.requests[0].id).toBe(requestId);
     });
 
     it('should allow doctor to accept request and create connection', async () => {
@@ -96,11 +91,8 @@ describe('Requests & Connections Flow (Integration)', () => {
         })
         .expect(201);
 
-      // Service returns { data: { id, status, ... } }, wrapped by TransformInterceptor
-      // Interceptor extracts .data, so response.body.data = { id, status, ... }
-      expect(response.body.data.status).toBe(RequestStatus.ACCEPTED);
+      expect(response.body.data.connection.status).toBe(ConnectionStatus.ACTIVE);
 
-      // Verify connection created
       const connection = await prisma.doctorPatientConnection.findFirst({
         where: {
           doctorId: (await prisma.doctor.findUnique({ where: { userId: doctor.id } }))?.id,
@@ -119,7 +111,6 @@ describe('Requests & Connections Flow (Integration)', () => {
         where: { userId: doctor.id },
       });
 
-      // Send new request
       const reqResponse = await request(app.getHttpServer())
         .post('/api/v1/requests')
         .set('Authorization', `Bearer ${anotherPatientToken}`)
@@ -128,7 +119,7 @@ describe('Requests & Connections Flow (Integration)', () => {
           prescriptionImage: 'http://example.com/prescription.jpg',
         });
 
-      const newRequestId = reqResponse.body.data.id;
+      const newRequestId = reqResponse.body.data.request.id;
 
       await request(app.getHttpServer())
         .post(`/api/v1/requests/${newRequestId}/reject`)
@@ -160,13 +151,43 @@ describe('Requests & Connections Flow (Integration)', () => {
           prescriptionImage: 'http://example.com/prescription.jpg',
         });
 
-      const newRequestId = reqResponse.body.data.id;
+      const newRequestId = reqResponse.body.data.request.id;
 
       await request(app.getHttpServer())
-        .post(`/api/v1/requests/${newRequestId}/accept`)
+        .post(`/api/v1/requests/${newRequestId}/reject`)
         .set('Authorization', `Bearer ${anotherPatientToken}`)
-        .send({ schedule: 'test' })
+        .send({
+          reason: 'test',
+        })
         .expect(403);
+    });
+    it('should prevent a different doctor from accepting someone else request', async () => {
+      const otherDoctor = await seedDoctor(prisma);
+      const otherDoctorToken = (await loginAndGetToken(app, otherDoctor.email, otherDoctor.rawPassword)).accessToken;
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/requests/${requestId}/accept`)
+        .set('Authorization', `Bearer ${otherDoctorToken}`)
+        .send({ schedule: 'Every Tuesday 5 PM' })
+        .expect(403); 
+    });
+
+    it('should prevent doctor from modifying an already accepted request', async () => {
+      await request(app.getHttpServer())
+        .post(`/api/v1/requests/${requestId}/reject`)
+        .set('Authorization', `Bearer ${doctorToken}`)
+        .send({ reason: 'Change my mind' })
+        .expect(400); 
+    });
+
+    it('should fail to create request with invalid data format', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/requests')
+        .set('Authorization', `Bearer ${patientToken}`)
+        .send({
+          doctorId: 'not-a-valid-uuid', 
+        })
+        .expect(400);
     });
   });
 
@@ -177,9 +198,8 @@ describe('Requests & Connections Flow (Integration)', () => {
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(200);
 
-      // Service returns { data: [...] }, wrapped by TransformInterceptor
-      // Interceptor extracts .data, so response.body.data = [...]
       expect(response.body.data.length).toBeGreaterThan(0);
+      expect(response.body.data[0]).toBeDefined();
       expect(response.body.data[0].doctor).toBeDefined();
     });
 
@@ -189,10 +209,8 @@ describe('Requests & Connections Flow (Integration)', () => {
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
-      // Service returns { data: [...] }, wrapped by TransformInterceptor
-      // Interceptor extracts .data, so response.body.data = [...]
-      expect(response.body.data.length).toBeGreaterThan(0);
-      expect(response.body.data[0].patient).toBeDefined();
+      expect(response.body.data.connections.length).toBeGreaterThan(0);
+      expect(response.body.data.connections[0].patient).toBeDefined();
     });
   });
 });

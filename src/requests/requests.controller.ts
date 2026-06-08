@@ -92,8 +92,6 @@ export class RequestsController {
   }
 
   @Post(':id/accept')
-  @UseGuards(OwnershipGuard)
-  @Owner('id')
   @Roles(UserRole.DOCTOR)
   @ApiOperation({
     summary: 'Accept Follow-up Request (Doctor)',
@@ -116,8 +114,6 @@ export class RequestsController {
   }
 
   @Post(':id/reject')
-  @UseGuards(OwnershipGuard)
-  @Owner('id')
   @Roles(UserRole.DOCTOR)
   @ApiOperation({
     summary: 'Reject Follow-up Request (Doctor)',
@@ -161,8 +157,6 @@ export class RequestsController {
   }
 
   @Get('connections/:id')
-  @UseGuards(OwnershipGuard)
-  @Owner('id')
   @ApiOperation({
     summary: 'Get Connection Details',
     description: 'Get detailed information about a specific connection',
