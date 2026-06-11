@@ -2,7 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createTestApp } from '../helpers/test-setup';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { seedDoctor, seedPatient, loginAndGetToken } from '../helpers/auth-helpers';
+import {
+  seedDoctor,
+  seedPatient,
+  loginAndGetToken,
+} from '../helpers/auth-helpers';
 
 describe('QR Flow (Integration)', () => {
   let app: INestApplication;
@@ -20,10 +24,18 @@ describe('QR Flow (Integration)', () => {
     doctor = await seedDoctor(prisma);
     patient = await seedPatient(prisma);
 
-    const doctorLogin = await loginAndGetToken(app, doctor.email, doctor.rawPassword);
+    const doctorLogin = await loginAndGetToken(
+      app,
+      doctor.email,
+      doctor.rawPassword,
+    );
     doctorToken = doctorLogin.accessToken;
 
-    const patientLogin = await loginAndGetToken(app, patient.email, patient.rawPassword);
+    const patientLogin = await loginAndGetToken(
+      app,
+      patient.email,
+      patient.rawPassword,
+    );
     patientToken = patientLogin.accessToken;
   });
 
@@ -56,7 +68,6 @@ describe('QR Flow (Integration)', () => {
         .post('/api/v1/qr/validate')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
-          qrToken: qrToken,
           token: qrToken,
         })
         .expect(200);
@@ -66,7 +77,9 @@ describe('QR Flow (Integration)', () => {
       expect(responseData.expiresAt).toBeDefined();
       expect(typeof responseData.remainingMinutes).toBe('number');
 
-      const tokenRow = await prisma.qrToken.findUnique({ where: { token: qrToken } });
+      const tokenRow = await prisma.qrToken.findUnique({
+        where: { token: qrToken },
+      });
       expect(tokenRow).toBeDefined();
       expect(tokenRow?.isUsed).toBe(false);
     });
@@ -80,10 +93,15 @@ describe('QR Flow (Integration)', () => {
         })
         .expect(200);
 
-      const responseData = response.body.data || response.body; expect(responseData).toBeDefined();
+      const responseData = response.body.data || response.body;
+      expect(responseData).toBeDefined();
 
-      const doctorProfile = await prisma.doctor.findUnique({ where: { userId: doctor.id } });
-      const patientProfile = await prisma.patient.findUnique({ where: { userId: patient.id } });
+      const doctorProfile = await prisma.doctor.findUnique({
+        where: { userId: doctor.id },
+      });
+      const patientProfile = await prisma.patient.findUnique({
+        where: { userId: patient.id },
+      });
 
       const connection = await prisma.doctorPatientConnection.findFirst({
         where: { doctorId: doctorProfile?.id, patientId: patientProfile?.id },
@@ -93,7 +111,13 @@ describe('QR Flow (Integration)', () => {
 
     it('should prevent reuse of the same QR token', async () => {
       const anotherPatient = await seedPatient(prisma);
-      const anotherPatientToken = (await loginAndGetToken(app, anotherPatient.email, anotherPatient.rawPassword)).accessToken;
+      const anotherPatientToken = (
+        await loginAndGetToken(
+          app,
+          anotherPatient.email,
+          anotherPatient.rawPassword,
+        )
+      ).accessToken;
 
       await request(app.getHttpServer())
         .post('/api/v1/qr/scan')
@@ -107,7 +131,9 @@ describe('QR Flow (Integration)', () => {
     it('should prevent scanning an expired QR token', async () => {
       const expiredToken = await prisma.qrToken.create({
         data: {
-          doctorId: (await prisma.doctor.findUnique({ where: { userId: doctor.id } }))!.id,
+          doctorId: (await prisma.doctor.findUnique({
+            where: { userId: doctor.id },
+          }))!.id,
           token: 'expired-token-123',
           expiresAt: new Date(Date.now() - 1000), // 1 second ago
         },

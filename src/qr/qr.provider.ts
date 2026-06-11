@@ -14,7 +14,7 @@ export class QrProvider {
    */
   generateToken(doctorId: string): string {
     const randomPart = crypto.randomBytes(24).toString('base64url'); // Generate 32 char random string
-    const baseToken = `${this.config.get('QR_TOKEN_PREFIX')}_${doctorId}_${randomPart}`;
+    const baseToken = `${this.config.get('QR_TOKEN_PREFIX')}${doctorId}_${randomPart}`;
     return baseToken;
   }
 

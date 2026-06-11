@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { AppModule } from 'src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { cleanDatabase } from './db-utils';
@@ -27,6 +31,27 @@ const mockThrottlerStorage = {
   reset: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockRedisService = {
+  getClient: jest.fn().mockReturnValue({
+    on: jest.fn(),
+    ping: jest.fn().mockResolvedValue('PONG'),
+    flushall: jest.fn().mockResolvedValue('OK'),
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue('OK'),
+    del: jest.fn().mockResolvedValue(1),
+    exists: jest.fn().mockResolvedValue(0),
+    scan: jest.fn().mockResolvedValue(['0', []]),
+    quit: jest.fn().mockResolvedValue('OK'),
+  }),
+  ping: jest.fn().mockResolvedValue('PONG'),
+  get: jest.fn().mockResolvedValue(null),
+  set: jest.fn().mockResolvedValue(undefined),
+  del: jest.fn().mockResolvedValue(undefined),
+  exists: jest.fn().mockResolvedValue(true),
+  scan: jest.fn().mockResolvedValue([]),
+  flushall: jest.fn().mockResolvedValue(undefined),
+};
+
 export async function createTestApp(): Promise<{
   app: INestApplication;
   prisma: PrismaService;
@@ -41,10 +66,14 @@ export async function createTestApp(): Promise<{
       sendPasswordResetOtp: jest.fn().mockResolvedValue(true),
       sendLoginOtpEmail: jest.fn().mockResolvedValue(true),
     })
-    .overrideProvider(require('src/notifications/notifications.service').NotificationsService)
+    .overrideProvider(
+      require('src/notifications/notifications.service').NotificationsService,
+    )
     .useValue({
       createNotification: jest.fn().mockResolvedValue(true),
-      getUserNotifications: jest.fn().mockResolvedValue({ notifications: [], nextCursor: null }),
+      getUserNotifications: jest
+        .fn()
+        .mockResolvedValue({ notifications: [], nextCursor: null }),
       getUnreadCount: jest.fn().mockResolvedValue(0),
       markAsRead: jest.fn().mockResolvedValue(true),
       markAllAsRead: jest.fn().mockResolvedValue(true),
@@ -59,6 +88,8 @@ export async function createTestApp(): Promise<{
     .useValue(mockThrottlerStorage)
     .overrideProvider(ThrottlerGuard)
     .useValue(mockThrottlerGuard)
+    .overrideProvider(RedisService)
+    .useValue(mockRedisService)
 
     .compile();
 
