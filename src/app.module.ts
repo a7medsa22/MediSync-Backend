@@ -30,7 +30,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
       expandVariables: true,
     }),
     // Rate Limiting
