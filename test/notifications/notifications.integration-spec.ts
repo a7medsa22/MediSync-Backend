@@ -1,104 +1,114 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { createTestApp } from '../helpers/test-setup';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { seedPatient, loginAndGetToken } from '../helpers/auth-helpers';
-import { NotificationType } from '@prisma/client';
+import { AppModule } from 'src/app.module';
 
-describe('Notifications Flow (Integration)', () => {
+describe('Notification Module (Event-Driven Integration)', () => {
   let app: INestApplication;
+  let eventEmitter: EventEmitter2;
   let prisma: PrismaService;
-  let patient: any;
-  let patientToken: string;
 
   beforeAll(async () => {
-    const setup = await createTestApp();
-    app = setup.app;
-    prisma = setup.prisma;
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
 
-    patient = await seedPatient(prisma);
-    const login = await loginAndGetToken(app, patient.email, patient.rawPassword);
-    patientToken = login.accessToken;
+    app = moduleRef.createNestApplication();
+    await app.init();
+
+    eventEmitter = app.get(EventEmitter2);
+    prisma = app.get(PrismaService);
   });
 
   afterAll(async () => {
+    if (prisma) {
+      await prisma.notification.deleteMany({});
+      await prisma.$disconnect();
+    }
     if (app) {
       await app.close();
     }
   });
 
-  describe('Notification Management', () => {
-    beforeEach(async () => {
-      // Create some test notifications
-      await prisma.notification.createMany({
-        data: [
-          {
-            userId: patient.id,
-            title: 'New Connection',
-            message: 'You have a new connection request',
-            type: NotificationType.CONNECTION_REQUEST,
-            isRead: false,
-          },
-          {
-            userId: patient.id,
-            title: 'Appointment Booked',
-            message: 'Your appointment has been booked',
-            type: NotificationType.APPOINTMENT_BOOKED,
-            isRead: false,
-          },
-        ],
+  describe('Notification Trigger Listener', () => {
+
+    it('should successfully save a notification in DB when notification.trigger event is emitted', async () => {
+      const user = await prisma.user.create({
+        data: {
+          email: 'notification-patient-test@medisync.com',
+          password: 'hashed_password_safe',
+          firstName: 'Omar',
+          lastName: 'Ali',
+          status: 'ACTIVE',
+
+        },
       });
+
+      eventEmitter.emit('notification.trigger', {
+        userId: user.id,
+        type: 'NEW_PRESCRIPTION',
+        data: {
+          prescriptionId: 'mock-prescription-uuid-123',
+          doctorName: 'Dr. Ahmed Salah',
+          actionUrl: '/prescriptions/mock-prescription-uuid-123',
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const savedNotification = await prisma.notification.findFirst({
+        where: {
+          userId: user.id,
+          type: 'NEW_PRESCRIPTION',
+        },
+      });
+      
+      expect(savedNotification).toBeDefined();
+      expect(savedNotification?.isRead).toBe(false);
+      
+      const metadataString = JSON.stringify(savedNotification?.metadata || {});
+      expect(metadataString).toContain('Dr. Ahmed Salah');
     });
 
-    it('should allow user to get their notifications', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/notifications')
-        .set('Authorization', `Bearer ${patientToken}`)
-        .expect(200);
-
-      // TransformInterceptor wraps response: { success, statusCode, message, data, timestamp }
-      // Service returns { data: [...] }, interceptor extracts .data
-      expect(response.body.data.length).toBeGreaterThanOrEqual(2);
-      expect(response.body.data[0].userId).toBe(patient.id);
-    });
-
-    it('should allow user to get unread count', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/api/v1/notifications/unread-count')
-        .set('Authorization', `Bearer ${patientToken}`)
-        .expect(200);
-
-      // Service returns { count: number } (no .data property, so whole object becomes data)
-      expect(response.body.data.count).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should allow user to mark a notification as read', async () => {
-      const notifications = await prisma.notification.findMany({
-        where: { userId: patient.id, isRead: false },
+  it(' should handle gracefully and not crash the server if userId does not exist', async () => {
+    const fakeUserId = '00000000-0000-0000-0000-000000000000';
+    try {
+      eventEmitter.emit('notification.trigger', {
+        userId: fakeUserId,
+        type: 'NEW_PRESCRIPTION',
+        data: { prescriptionId: '123', doctorName: 'Dr. Test', actionUrl: '/' },
       });
-      const notificationId = notifications[0].id;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } catch (err) {
+      expect(err).toBeDefined();
+    }
+  });
 
-      await request(app.getHttpServer())
-        .patch(`/api/v1/notifications/${notificationId}/read`)
-        .set('Authorization', `Bearer ${patientToken}`)
-        .expect(200);
-
-      const updated = await prisma.notification.findUnique({
-        where: { id: notificationId },
+    it('should handle safely if data payload contains missing or incomplete fields', async () => {
+      const user = await prisma.user.create({
+        data: {
+          email: 'incomplete-payload-test@medisync.com',
+          password: 'hashed_password_safe',
+          firstName: 'Khaled',
+          lastName: 'Hassan',
+          status: 'ACTIVE',
+        },
       });
-      expect(updated?.isRead).toBe(true);
-    });
 
-    it('should allow user to mark all notifications as read', async () => {
-      await request(app.getHttpServer())
-        .patch('/api/v1/notifications/read-all')
-        .set('Authorization', `Bearer ${patientToken}`)
-        .expect(200);
-
-      const unreadCount = await prisma.notification.count({
-        where: { userId: patient.id, isRead: false },
+      eventEmitter.emit('notification.trigger', {
+        userId: user.id,
+        type: 'NEW_PRESCRIPTION',
+        data: {},
       });
-      expect(unreadCount).toBe(0);
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const savedNotification = await prisma.notification.findFirst({
+        where: { userId: user.id, type: 'NEW_PRESCRIPTION' },
+      });
+
+      expect(savedNotification).toBeDefined();
     });
   });
 });

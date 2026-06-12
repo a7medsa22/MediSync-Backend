@@ -1,10 +1,10 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import Redis, { RedisOptions } from 'ioredis';
+import Redis from 'ioredis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
-  private client: Redis;
+  private client!: Redis;
   private metrics = {
     hits: 0,
     misses: 0,
@@ -100,7 +100,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async pipeline(callback: (pipe: any) => void): Promise<any[]> {
     const pipe = this.client.pipeline();
     callback(pipe);
-    return pipe.exec();
+    return (await pipe.exec()) ?? [];
   }
 
   // --- Health & Maintenance ---
@@ -139,7 +139,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       return {
         status: 'down',
-        error: error.message,
+        error: error,
       };
     }
   }

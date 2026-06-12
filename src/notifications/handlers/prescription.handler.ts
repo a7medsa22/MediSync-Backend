@@ -1,10 +1,10 @@
+import { NotificationsType } from "../enums/notifications.enum";
 import { NotificationHandler } from "../interfaces/notification-handler.interface";
-import { NotificationsType as T } from "../enums/notifications.enum";
 
 export class PrescriptionHandler implements NotificationHandler {
-    build(data: any, type: T): { title: string; message: string; metadata?: any; } {
+    build(data: any, type: NotificationsType): { title: string; message: string; metadata?: any; } {
         switch (type) {
-            case T.PRESCRIPTION_RENEWAL_REQUEST:
+            case NotificationsType.PRESCRIPTION_RENEWAL_REQUEST:
                 return {
                     title: 'Prescription Renewal Request',
                     message: `Patient ${data.patientName} has requested a renewal for ${data.medicationName}`,
@@ -13,7 +13,7 @@ export class PrescriptionHandler implements NotificationHandler {
                         prescriptionId: data.prescriptionId,
                     },
                 };
-            case T.NEW_PRESCRIPTION:
+            case NotificationsType.NEW_PRESCRIPTION:
                 return {
                     title: 'New Prescription',
                     message: `Dr. ${data.doctorName} has prescribed new medication for you.`,
@@ -22,7 +22,7 @@ export class PrescriptionHandler implements NotificationHandler {
                         actionUrl: data.actionUrl,
                     },
                 };
-            case T.PRESCRIPTION_CANCELLED:
+            case NotificationsType.PRESCRIPTION_CANCELLED:
                 return {
                     title: 'Prescription Cancelled',
                     message: `Dr. ${data.doctorName} has cancelled your prescription for ${data.medicationName || 'medication'}. Reason: ${data.reason}`,
@@ -31,7 +31,7 @@ export class PrescriptionHandler implements NotificationHandler {
                         reason: data.reason,
                     },
                 };
-            case T.PRESCRIPTION_RENEWAL_APPROVED:
+            case NotificationsType.PRESCRIPTION_RENEWAL_APPROVED:
                 return {
                     title: 'Renewal Approved',
                     message: `Dr. ${data.doctorName} has approved your renewal request for ${data.medicationName || 'medication'}.`,
@@ -39,7 +39,7 @@ export class PrescriptionHandler implements NotificationHandler {
                         prescriptionId: data.prescriptionId,
                     },
                 };
-            case T.PRESCRIPTION_RENEWAL_REJECTED:
+            case NotificationsType.PRESCRIPTION_RENEWAL_REJECTED:
                 return {
                     title: 'Renewal Rejected',
                     message: `Dr. ${data.doctorName} has rejected your renewal request. Reason: ${data.reason}`,
@@ -48,7 +48,7 @@ export class PrescriptionHandler implements NotificationHandler {
                         reason: data.reason,
                     },
                 };
-            case T.PRESCRIPTION_EXPIRY_REMINDER:
+            case NotificationsType.PRESCRIPTION_EXPIRY_WARNING:
                 return {
                     title: 'Prescription Expiry Reminder',
                     message: `Your prescription for ${data.medicationName} is expiring on ${data.expiryDate}. Please contact your doctor for renewal if needed.`,
