@@ -116,6 +116,7 @@ model Patient {
   prescriptionRenewals  PrescriptionRenewal[]
   prescriptions         Prescription[]
   qrTokens              QrToken[]
+  reviews               DoctorReview[]
 
   @@index([userId])
   @@map("patients")
@@ -153,6 +154,9 @@ model Doctor {
   prescriptionTemplates PrescriptionTemplate[]
   prescriptions         Prescription[]
   qrTokens              QrToken[]
+  clinics               Clinic[]
+  reviews               DoctorReview[]
+  insurances            DoctorInsurance[]
 
   @@map("doctors")
 }
@@ -476,6 +480,7 @@ model Appointment {
   connection         DoctorPatientConnection @relation(fields: [connectionId], references: [id])
   doctor             Doctor                  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   patient            Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinic             Clinic?                 @relation(fields: [clinicId], references: [id])
 
   @@unique([doctorId, startTime])
   @@index([doctorId])
@@ -485,6 +490,99 @@ model Appointment {
   @@index([status])
   @@index([status, startTime])
   @@map("appointments")
+}
+
+model InsuranceProvider {
+  id               String            @id @default(uuid())
+  name             String
+  code             String            @unique
+  description      String?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  doctorInsurances DoctorInsurance[]
+  clinicInsurances ClinicInsurance[]
+
+  @@map("insurance_providers")
+}
+
+model Clinic {
+  id                 String             @id @default(uuid())
+  doctorId           String
+  doctor             Doctor             @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  name               String
+  address            String
+  city               String
+  governorate        String
+  zipCode            String?
+  phone              String
+  email              String
+  website            String?
+  licenseNumber      String
+  licenseDoc         String // S3 URL String
+  consultationFee    Decimal            @db.Decimal(10, 2)
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  rejectionReason    String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  insurances         ClinicInsurance[]
+  appointments       Appointment[]
+
+  @@index([verificationStatus])
+  @@index([city, verificationStatus])
+  @@map("clinics")
+}
+
+model DoctorReview {
+  id          String   @id @default(uuid())
+  doctorId    String
+  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  rating      Int      @db.Integer
+  comment     String?  @db.Text
+  isAnonymous Boolean  @default(false)
+  isFlagged   Boolean  @default(false)
+  flagReason  String?  @db.VarChar
+  isApproved  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@unique([doctorId, patientId])
+  @@index([isFlagged])
+  @@map("doctor_reviews")
+}
+
+model DoctorInsurance {
+  id          String            @id @default(uuid())
+  doctorId    String
+  doctor      Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  insuranceId String
+  insurance   InsuranceProvider @relation(fields: [insuranceId], references: [id], onDelete: Cascade)
+  isVerified  Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+
+  @@unique([doctorId, insuranceId])
+  @@map("doctor_insurances")
+}
+
+model ClinicInsurance {
+  id          String            @id @default(uuid())
+  clinicId    String
+  clinic      Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  insuranceId String
+  insurance   InsuranceProvider @relation(fields: [insuranceId], references: [id], onDelete: Cascade)
+  isVerified  Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+
+  @@unique([clinicId, insuranceId])
+  @@map("clinic_insurances")
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
 }
 
 enum UserRole {
@@ -534,6 +632,9 @@ enum NotificationType {
   PRESCRIPTION_CANCELLED
   PRESCRIPTION_RENEWAL_APPROVED
   PRESCRIPTION_RENEWAL_REJECTED
+  PRESCRIPTION_EXPIRY_REMINDER
+  CLINIC_VERIFIED
+  CLINIC_REJECTED
 }
 
 enum ConnectionStatus {
