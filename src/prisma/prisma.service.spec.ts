@@ -12,7 +12,9 @@ describe('PrismaService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue('postgresql://user:pass@localhost:5432/db'),
+            get: jest
+              .fn()
+              .mockReturnValue('postgresql://user:pass@localhost:5432/db'),
           },
         },
       ],

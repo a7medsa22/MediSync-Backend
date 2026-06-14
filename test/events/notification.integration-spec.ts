@@ -23,7 +23,12 @@ const mockThrottlerGuard = {
 };
 
 const mockThrottlerStorage = {
-  increment: jest.fn().mockResolvedValue({ remaining: 100, total: 100, isBlocked: false, timeToNext: 0 }),
+  increment: jest.fn().mockResolvedValue({
+    remaining: 100,
+    total: 100,
+    isBlocked: false,
+    timeToNext: 0,
+  }),
   get: jest.fn().mockResolvedValue(null),
   resetAll: jest.fn().mockResolvedValue(undefined),
   reset: jest.fn().mockResolvedValue(undefined),
@@ -50,7 +55,8 @@ const mockRedisService = {
   flushall: jest.fn().mockResolvedValue(undefined),
 };
 
-const waitForEventProcessing = () => new Promise((resolve) => setTimeout(resolve, 300));
+const waitForEventProcessing = () =>
+  new Promise((resolve) => setTimeout(resolve, 300));
 
 dotenv.config({ path: '.env.test' });
 
@@ -145,9 +151,13 @@ describe('Event-Driven Notification System (Integration)', () => {
 
       expect(notifications.length).toBe(1);
       expect(notifications[0].userId).toBe(user.id);
-      expect(notifications[0].type).toBe('NEW_PRESCRIPTION' as NotificationType);
+      expect(notifications[0].type).toBe(
+        'NEW_PRESCRIPTION' as NotificationType,
+      );
       expect(notifications[0].title).toBe('Prescription Notification');
-      expect(notifications[0].message).toContain('A new prescription has been added');
+      expect(notifications[0].message).toContain(
+        'A new prescription has been added',
+      );
       expect(notifications[0].metadata).toEqual(
         expect.objectContaining({
           prescriptionId: 'test-prescription-id-123',
@@ -194,7 +204,9 @@ describe('Event-Driven Notification System (Integration)', () => {
       });
 
       expect(notifications.length).toBe(1);
-      expect(notifications[0].type).toBe('NEW_PRESCRIPTION' as NotificationType);
+      expect(notifications[0].type).toBe(
+        'NEW_PRESCRIPTION' as NotificationType,
+      );
       expect(notifications[0].title).toBeTruthy();
       expect(notifications[0].message).toBeTruthy();
     });

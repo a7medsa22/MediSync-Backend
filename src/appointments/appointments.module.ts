@@ -11,6 +11,11 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 @Module({
   imports: [NotificationsModule, PrismaModule],
   controllers: [AppointmentsController, AvailabilityController],
-  providers: [AppointmentsService, SlotGeneratorService, AvailabilityService, AvailabilityValidationHelpers],
+  providers: [
+    AppointmentsService,
+    SlotGeneratorService,
+    AvailabilityService,
+    AvailabilityValidationHelpers,
+  ],
 })
 export class AppointmentsModule {}

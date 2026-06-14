@@ -223,7 +223,11 @@ export class RequestsService {
     const doctor = await this.prisma.doctor.findUnique({
       where: { userId: doctorId },
     });
-    if (!doctor) return { connections: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } };
+    if (!doctor)
+      return {
+        connections: [],
+        pagination: { page: 1, limit: 10, total: 0, pages: 0 },
+      };
 
     const { page = 1, limit = 10 } = dto;
     const skip = (page - 1) * limit;
@@ -293,8 +297,8 @@ export class RequestsService {
 
     return connection;
   }
-  
-  // i not need this sevice after finshed phases 2 
+
+  // i not need this sevice after finshed phases 2
   // async updateAvailability(
   //   connectionId: string,
   //   doctorId: string,

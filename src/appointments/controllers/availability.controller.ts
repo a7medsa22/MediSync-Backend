@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -34,7 +42,8 @@ export class AvailabilityController {
   @Post()
   @ApiOperation({
     summary: 'Create doctor availability',
-    description: 'Create a new availability window for a specific day and time. Prevents overlapping availability windows.',
+    description:
+      'Create a new availability window for a specific day and time. Prevents overlapping availability windows.',
   })
   @ApiBody({ type: CreateAvailabilityRequestDto })
   @ApiResponse({
@@ -50,17 +59,25 @@ export class AvailabilityController {
       message: 'Availability created successfully',
     },
   })
-  @ApiBadRequestResponse({ description: 'Invalid time range, slot duration, or max appointments' })
-  @ApiConflictResponse({ description: 'Overlapping availability already exists for this day' })
+  @ApiBadRequestResponse({
+    description: 'Invalid time range, slot duration, or max appointments',
+  })
+  @ApiConflictResponse({
+    description: 'Overlapping availability already exists for this day',
+  })
   async createAvailability(@Body() createDto: CreateAvailabilityRequestDto) {
     const { doctorId, ...availabilityDto } = createDto;
-    return this.availabilityService.createAvailability(doctorId, availabilityDto);
+    return this.availabilityService.createAvailability(
+      doctorId,
+      availabilityDto,
+    );
   }
 
   @Post('bulk')
   @ApiOperation({
     summary: 'Create multiple availabilities (bulk)',
-    description: 'Create multiple availability windows at once. Returns partial success if some entries fail.',
+    description:
+      'Create multiple availability windows at once. Returns partial success if some entries fail.',
   })
   @ApiBody({ type: CreateMultipleAvailabilitiesRequestDto })
   @ApiResponse({
@@ -91,15 +108,23 @@ export class AvailabilityController {
     @Body() createDto: CreateMultipleAvailabilitiesRequestDto,
   ) {
     const { doctorId, ...bulkDto } = createDto;
-    return this.availabilityService.createMultipleAvailabilities(doctorId, bulkDto);
+    return this.availabilityService.createMultipleAvailabilities(
+      doctorId,
+      bulkDto,
+    );
   }
 
   @Get('doctor/:doctorId')
   @ApiOperation({
     summary: 'Get doctor availabilities',
-    description: 'Retrieve all active availability windows for a specific doctor, ordered by day and start time.',
+    description:
+      'Retrieve all active availability windows for a specific doctor, ordered by day and start time.',
   })
-  @ApiParam({ name: 'doctorId', type: 'string', description: 'Unique identifier of the doctor' })
+  @ApiParam({
+    name: 'doctorId',
+    type: 'string',
+    description: 'Unique identifier of the doctor',
+  })
   @ApiResponse({
     status: 200,
     description: 'Availabilities retrieved successfully',
@@ -125,7 +150,8 @@ export class AvailabilityController {
   @Patch(':id')
   @ApiOperation({
     summary: 'Update availability',
-    description: 'Update an existing availability window. Validates against overlapping windows and time constraints.',
+    description:
+      'Update an existing availability window. Validates against overlapping windows and time constraints.',
   })
   @ApiParam({ name: 'id', type: 'string', description: 'Availability ID' })
   @ApiBody({ type: UpdateAvailabilityRequestDto })
@@ -142,9 +168,15 @@ export class AvailabilityController {
       message: 'Availability updated successfully',
     },
   })
-  @ApiBadRequestResponse({ description: 'Invalid update parameters or validation failed' })
-  @ApiNotFoundResponse({ description: 'Availability not found or not owned by doctor' })
-  @ApiConflictResponse({ description: 'Update would create overlapping availability' })
+  @ApiBadRequestResponse({
+    description: 'Invalid update parameters or validation failed',
+  })
+  @ApiNotFoundResponse({
+    description: 'Availability not found or not owned by doctor',
+  })
+  @ApiConflictResponse({
+    description: 'Update would create overlapping availability',
+  })
   async updateAvailability(
     @Param('id') id: string,
     @Body() updateDto: UpdateAvailabilityRequestDto,
@@ -156,11 +188,17 @@ export class AvailabilityController {
   @Delete(':id')
   @ApiOperation({
     summary: 'Delete availability (soft delete)',
-    description: 'Soft delete an availability window. The record remains in database but is marked inactive.',
+    description:
+      'Soft delete an availability window. The record remains in database but is marked inactive.',
   })
   @ApiParam({ name: 'id', type: 'string', description: 'Availability ID' })
-  @ApiResponse({ status: 200, description: 'Availability deleted successfully' })
-  @ApiNotFoundResponse({ description: 'Availability not found or not owned by doctor' })
+  @ApiResponse({
+    status: 200,
+    description: 'Availability deleted successfully',
+  })
+  @ApiNotFoundResponse({
+    description: 'Availability not found or not owned by doctor',
+  })
   async deleteAvailability(
     @Param('id') id: string,
     @Body() body: { doctorId: string },
@@ -175,7 +213,8 @@ export class AvailabilityController {
   @Post('breaks')
   @ApiOperation({
     summary: 'Create doctor break',
-    description: 'Create a break period (e.g., lunch, prayer time) within an availability window. Breaks cannot overlap with each other or extend outside availability times.',
+    description:
+      'Create a break period (e.g., lunch, prayer time) within an availability window. Breaks cannot overlap with each other or extend outside availability times.',
   })
   @ApiBody({ type: CreateBreakRequestDto })
   @ApiResponse({
@@ -190,7 +229,9 @@ export class AvailabilityController {
       message: 'Break created successfully',
     },
   })
-  @ApiBadRequestResponse({ description: 'Break outside availability window or invalid time range' })
+  @ApiBadRequestResponse({
+    description: 'Break outside availability window or invalid time range',
+  })
   @ApiConflictResponse({ description: 'Break overlaps with existing break' })
   async createBreak(@Body() createDto: CreateBreakRequestDto) {
     const { doctorId, ...breakDto } = createDto;
@@ -200,9 +241,14 @@ export class AvailabilityController {
   @Get('breaks/:doctorId')
   @ApiOperation({
     summary: 'Get doctor breaks',
-    description: 'Retrieve all break periods for a doctor, ordered by day and start time.',
+    description:
+      'Retrieve all break periods for a doctor, ordered by day and start time.',
   })
-  @ApiParam({ name: 'doctorId', type: 'string', description: 'Unique identifier of the doctor' })
+  @ApiParam({
+    name: 'doctorId',
+    type: 'string',
+    description: 'Unique identifier of the doctor',
+  })
   @ApiResponse({
     status: 200,
     description: 'Breaks retrieved successfully',
@@ -224,7 +270,8 @@ export class AvailabilityController {
   @Patch('breaks/:id')
   @ApiOperation({
     summary: 'Update doctor break',
-    description: 'Update an existing break period. Validates against overlapping breaks and availability constraints.',
+    description:
+      'Update an existing break period. Validates against overlapping breaks and availability constraints.',
   })
   @ApiParam({ name: 'id', type: 'string', description: 'Break ID' })
   @ApiBody({ type: UpdateBreakRequestDto })
@@ -240,8 +287,12 @@ export class AvailabilityController {
       message: 'Break updated successfully',
     },
   })
-  @ApiBadRequestResponse({ description: 'Invalid break parameters or validation failed' })
-  @ApiNotFoundResponse({ description: 'Break not found or not owned by doctor' })
+  @ApiBadRequestResponse({
+    description: 'Invalid break parameters or validation failed',
+  })
+  @ApiNotFoundResponse({
+    description: 'Break not found or not owned by doctor',
+  })
   @ApiConflictResponse({ description: 'Update would create overlapping break' })
   async updateBreak(
     @Param('id') id: string,
@@ -258,7 +309,9 @@ export class AvailabilityController {
   })
   @ApiParam({ name: 'id', type: 'string', description: 'Break ID' })
   @ApiResponse({ status: 200, description: 'Break deleted successfully' })
-  @ApiNotFoundResponse({ description: 'Break not found or not owned by doctor' })
+  @ApiNotFoundResponse({
+    description: 'Break not found or not owned by doctor',
+  })
   async deleteBreak(
     @Param('id') id: string,
     @Body() body: { doctorId: string },
@@ -273,7 +326,8 @@ export class AvailabilityController {
   @Post('day-offs')
   @ApiOperation({
     summary: 'Create doctor day-off',
-    description: 'Mark a specific date as day-off (e.g., vacation, conference, sick leave). Cannot be set for past dates.',
+    description:
+      'Mark a specific date as day-off (e.g., vacation, conference, sick leave). Cannot be set for past dates.',
   })
   @ApiBody({ type: CreateDayOffRequestDto })
   @ApiResponse({
@@ -296,7 +350,8 @@ export class AvailabilityController {
   @Post('day-offs/bulk')
   @ApiOperation({
     summary: 'Create multiple day-offs (bulk)',
-    description: 'Create multiple day-off entries at once. Returns partial success if some entries fail.',
+    description:
+      'Create multiple day-off entries at once. Returns partial success if some entries fail.',
   })
   @ApiBody({ type: CreateMultipleDaysOffRequestDto })
   @ApiResponse({
@@ -321,7 +376,9 @@ export class AvailabilityController {
       ],
     },
   })
-  async createMultipleDaysOff(@Body() createDto: CreateMultipleDaysOffRequestDto) {
+  async createMultipleDaysOff(
+    @Body() createDto: CreateMultipleDaysOffRequestDto,
+  ) {
     const { doctorId, ...bulkDto } = createDto;
     return this.availabilityService.createMultipleDaysOff(doctorId, bulkDto);
   }
@@ -331,7 +388,11 @@ export class AvailabilityController {
     summary: 'Get doctor day-offs',
     description: 'Retrieve all day-off periods for a doctor, ordered by date.',
   })
-  @ApiParam({ name: 'doctorId', type: 'string', description: 'Unique identifier of the doctor' })
+  @ApiParam({
+    name: 'doctorId',
+    type: 'string',
+    description: 'Unique identifier of the doctor',
+  })
   @ApiResponse({
     status: 200,
     description: 'Day-offs retrieved successfully',
@@ -355,7 +416,9 @@ export class AvailabilityController {
   })
   @ApiParam({ name: 'id', type: 'string', description: 'Day-off ID' })
   @ApiResponse({ status: 200, description: 'Day-off deleted successfully' })
-  @ApiNotFoundResponse({ description: 'Day-off not found or not owned by doctor' })
+  @ApiNotFoundResponse({
+    description: 'Day-off not found or not owned by doctor',
+  })
   async deleteDayOff(
     @Param('id') id: string,
     @Body() body: { doctorId: string },
@@ -370,9 +433,14 @@ export class AvailabilityController {
   @Get('summary/:doctorId')
   @ApiOperation({
     summary: 'Get availability summary',
-    description: 'Get a complete overview of a doctor\'s availability configuration including all windows, breaks, and day-offs.',
+    description:
+      "Get a complete overview of a doctor's availability configuration including all windows, breaks, and day-offs.",
   })
-  @ApiParam({ name: 'doctorId', type: 'string', description: 'Unique identifier of the doctor' })
+  @ApiParam({
+    name: 'doctorId',
+    type: 'string',
+    description: 'Unique identifier of the doctor',
+  })
   @ApiResponse({
     status: 200,
     description: 'Availability summary retrieved successfully',

@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SlotGeneratorService } from './slot-generator.service';
@@ -39,7 +43,10 @@ describe('AppointmentsService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: SlotGeneratorService, useValue: slotGeneratorMock },
         { provide: NotificationsService, useValue: notificationsMock },
-        { provide: EventEmitter2, useValue: { emit: jest.fn(), on: jest.fn(), off: jest.fn() } },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn(), on: jest.fn(), off: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -71,14 +78,18 @@ describe('AppointmentsService', () => {
       const startDate = new Date('2026-01-05T00:00:00.000Z');
       const endDate = new Date('2026-01-05T23:59:59.000Z');
 
-      prismaMock.doctorAvailability.findMany.mockResolvedValue([
-        { doctorId },
-      ]);
+      prismaMock.doctorAvailability.findMany.mockResolvedValue([{ doctorId }]);
 
       // Two candidate slots
       const slots = [
-        { start: new Date('2026-01-05T09:00:00.000Z'), end: new Date('2026-01-05T09:30:00.000Z') },
-        { start: new Date('2026-01-05T09:30:00.000Z'), end: new Date('2026-01-05T10:00:00.000Z') },
+        {
+          start: new Date('2026-01-05T09:00:00.000Z'),
+          end: new Date('2026-01-05T09:30:00.000Z'),
+        },
+        {
+          start: new Date('2026-01-05T09:30:00.000Z'),
+          end: new Date('2026-01-05T10:00:00.000Z'),
+        },
       ];
 
       slotGeneratorMock.generateSlots.mockResolvedValue(slots);
@@ -91,12 +102,18 @@ describe('AppointmentsService', () => {
         },
       ]);
 
-      const result = await service.getAvailableSlots({ doctorId, startDate, endDate });
+      const result = await service.getAvailableSlots({
+        doctorId,
+        startDate,
+        endDate,
+      });
 
       expect(result.doctorId).toBe(doctorId);
       expect(result.availableCount).toBe(1);
       expect(result.slots).toHaveLength(1);
-      expect(result.slots[0].start.toISOString()).toBe('2026-01-05T09:00:00.000Z');
+      expect(result.slots[0].start.toISOString()).toBe(
+        '2026-01-05T09:00:00.000Z',
+      );
     });
   });
 
@@ -229,7 +246,9 @@ describe('AppointmentsService', () => {
 
       prismaMock.appointment.update.mockRejectedValue(err);
 
-      await expect(service.confirmAppointment('app_404', 'patient_1')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.confirmAppointment('app_404', 'patient_1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 
@@ -274,7 +293,9 @@ describe('AppointmentsService', () => {
     it('throws NotFoundException when appointment does not exist', async () => {
       prismaMock.appointment.findUnique.mockResolvedValue(null);
 
-      await expect(service.completeAppointment('app_404')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        service.completeAppointment('app_404'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('throws BadRequestException when appointment cannot be completed', async () => {
@@ -283,7 +304,9 @@ describe('AppointmentsService', () => {
         status: AppointmentStatus.CANCELLED,
       });
 
-      await expect(service.completeAppointment('app_1')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.completeAppointment('app_1')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
   });
 
@@ -312,7 +335,9 @@ describe('AppointmentsService', () => {
         cancellationTimestampMs: now.getTime(),
       });
 
-      const result = await service.cancelAppointment(appointmentId, userId, { reason: '  too late  ' } as any);
+      const result = await service.cancelAppointment(appointmentId, userId, {
+        reason: '  too late  ',
+      } as any);
 
       expect(prismaMock.appointment.update).toHaveBeenCalled();
 
@@ -363,7 +388,9 @@ describe('AppointmentsService', () => {
         patientId: 'patient_1',
       });
 
-      const result = await service.cancelAppointment(appointmentId, userId, { reason: 'x' } as any);
+      const result = await service.cancelAppointment(appointmentId, userId, {
+        reason: 'x',
+      } as any);
 
       expect(result.message).toContain('already cancelled');
       expect(result.id).toBe(appointmentId);
@@ -376,7 +403,9 @@ describe('AppointmentsService', () => {
       prismaMock.appointment.update.mockRejectedValue(new Error('db down'));
 
       await expect(
-        service.cancelAppointment(appointmentId, userId, { reason: 'x' } as any),
+        service.cancelAppointment(appointmentId, userId, {
+          reason: 'x',
+        } as any),
       ).rejects.toBeInstanceOf(Error);
     });
   });

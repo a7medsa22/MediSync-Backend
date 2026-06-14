@@ -32,8 +32,15 @@ export class RolesGuard implements CanActivate {
 
     // Debugging: help us understand why role checks fail in integration tests.
     // (Keep lightweight: prints role/status only.)
-    // eslint-disable-next-line no-console
-    console.log('🛂 RolesGuard requiredRoles=', requiredRoles, 'user.role=', user.role, 'user.status=', user.status);
+
+    console.log(
+      '🛂 RolesGuard requiredRoles=',
+      requiredRoles,
+      'user.role=',
+      user.role,
+      'user.status=',
+      user.status,
+    );
 
     return requiredRoles.includes(user.role);
   }

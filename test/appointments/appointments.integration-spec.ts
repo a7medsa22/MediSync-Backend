@@ -2,7 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createTestApp } from '../helpers/test-setup';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { seedDoctor, seedPatient, loginAndGetToken } from '../helpers/auth-helpers';
+import {
+  seedDoctor,
+  seedPatient,
+  loginAndGetToken,
+} from '../helpers/auth-helpers';
 import { AppointmentStatus, DayOfWeek } from '@prisma/client';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -41,8 +45,12 @@ describe('Appointments & Availability Flow (Integration)', () => {
     doctor = await seedDoctor(prisma);
     patient = await seedPatient(prisma);
 
-    doctorProfile = await prisma.doctor.findUnique({ where: { userId: doctor.id } });
-    patientProfile = await prisma.patient.findUnique({ where: { userId: patient.id } });
+    doctorProfile = await prisma.doctor.findUnique({
+      where: { userId: doctor.id },
+    });
+    patientProfile = await prisma.patient.findUnique({
+      where: { userId: patient.id },
+    });
 
     // Create a connection first
     connection = await prisma.doctorPatientConnection.create({
@@ -53,10 +61,18 @@ describe('Appointments & Availability Flow (Integration)', () => {
       },
     });
 
-    const doctorLogin = await loginAndGetToken(app, doctor.email, doctor.rawPassword);
+    const doctorLogin = await loginAndGetToken(
+      app,
+      doctor.email,
+      doctor.rawPassword,
+    );
     doctorToken = doctorLogin.accessToken;
 
-    const patientLogin = await loginAndGetToken(app, patient.email, patient.rawPassword);
+    const patientLogin = await loginAndGetToken(
+      app,
+      patient.email,
+      patient.rawPassword,
+    );
     patientToken = patientLogin.accessToken;
   });
 
@@ -75,14 +91,14 @@ describe('Appointments & Availability Flow (Integration)', () => {
           doctorId: doctorProfile.id,
           dayOfWeek: DayOfWeek.MONDAY,
           startTime: 540, // 09:00 in minutes
-          endTime: 720,   // 12:00 in minutes
+          endTime: 720, // 12:00 in minutes
           slotDuration: 30,
           maxAppointmentsPerDay: 10,
         });
 
       console.log('Response body:', response.body);
       console.log('Status:', response.status);
-      
+
       expect(response.status).toBe(201);
       expect(response.body.data.dayOfWeek).toBe(DayOfWeek.MONDAY);
       expect(response.body.data.id).toBeDefined();
@@ -97,7 +113,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
           doctorId: doctorProfile.id,
           dayOfWeek: DayOfWeek.TUESDAY,
           startTime: 540, // 09:00 in minutes
-          endTime: 720,   // 12:00 in minutes
+          endTime: 720, // 12:00 in minutes
           slotDuration: 30,
           maxAppointmentsPerDay: 10,
         })
@@ -111,14 +127,14 @@ describe('Appointments & Availability Flow (Integration)', () => {
           doctorId: doctorProfile.id,
           dayOfWeek: DayOfWeek.TUESDAY,
           startTime: 600, // 10:00 in minutes (overlaps with 09:00-12:00)
-          endTime: 780,   // 13:00 in minutes (overlaps with 09:00-12:00)
+          endTime: 780, // 13:00 in minutes (overlaps with 09:00-12:00)
           slotDuration: 30,
           maxAppointmentsPerDay: 10,
         });
 
       console.log('Overlapping test response:', response.body);
       console.log('Overlapping test status:', response.status);
-      
+
       expect(response.status).toBe(409);
     });
   });
@@ -188,7 +204,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
       const daysUntilWednesday = (3 + 7 - nextWednesday.getDay()) % 7 || 7;
       nextWednesday.setDate(nextWednesday.getDate() + daysUntilWednesday);
       nextWednesday.setHours(10, 0, 0, 0);
-      
+
       const response = await request(app.getHttpServer())
         .post('/api/v1/appointments')
         .set('Authorization', `Bearer ${patientToken}`)
@@ -216,7 +232,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
       const daysUntilThursday = (4 + 7 - nextThursday.getDay()) % 7 || 7;
       nextThursday.setDate(nextThursday.getDate() + daysUntilThursday);
       nextThursday.setHours(10, 0, 0, 0);
-      
+
       // First, create an appointment with the original patient
       await sleep(1100);
 
@@ -235,8 +251,16 @@ describe('Appointments & Availability Flow (Integration)', () => {
 
       // Then try to book the same slot with another patient
       const anotherPatient = await seedPatient(prisma);
-      const anotherPatientProfile = await prisma.patient.findUnique({ where: { userId: anotherPatient.id } });
-      const anotherPatientToken = (await loginAndGetToken(app, anotherPatient.email, anotherPatient.rawPassword)).accessToken;
+      const anotherPatientProfile = await prisma.patient.findUnique({
+        where: { userId: anotherPatient.id },
+      });
+      const anotherPatientToken = (
+        await loginAndGetToken(
+          app,
+          anotherPatient.email,
+          anotherPatient.rawPassword,
+        )
+      ).accessToken;
 
       // Create a connection for the new patient
       const anotherConnection = await prisma.doctorPatientConnection.create({
@@ -246,7 +270,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
           status: 'ACTIVE',
         },
       });
-      
+
       const response = await request(app.getHttpServer())
         .post('/api/v1/appointments')
         .set('Authorization', `Bearer ${anotherPatientToken}`)
@@ -260,7 +284,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
 
       console.log('Double booking response:', response.body);
       console.log('Double booking status:', response.status);
-      
+
       expect(response.status).toBe(400);
     });
 
@@ -270,7 +294,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
       const daysUntilFriday = (5 + 7 - nextFriday.getDay()) % 7 || 7;
       nextFriday.setDate(nextFriday.getDate() + daysUntilFriday);
       nextFriday.setHours(10, 0, 0, 0);
-      
+
       // Create an appointment
       const appointmentResponse = await request(app.getHttpServer())
         .post('/api/v1/appointments')
@@ -302,7 +326,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
       const daysUntilSaturday = (6 + 7 - nextSaturday.getDay()) % 7 || 7;
       nextSaturday.setDate(nextSaturday.getDate() + daysUntilSaturday);
       nextSaturday.setHours(10, 0, 0, 0);
-      
+
       // Create an appointment
       const appointmentResponse = await request(app.getHttpServer())
         .post('/api/v1/appointments')
@@ -428,7 +452,9 @@ describe('Appointments & Availability Flow (Integration)', () => {
         .expect(200);
 
       expect(response.body.data.id).toBe(createdAppointment.id);
-      expect(new Date(response.body.data.startTime).toISOString()).toBe(new Date(newStart).toISOString());
+      expect(new Date(response.body.data.startTime).toISOString()).toBe(
+        new Date(newStart).toISOString(),
+      );
     });
 
     it('should retrieve doctor and patient appointments and single appointment', async () => {

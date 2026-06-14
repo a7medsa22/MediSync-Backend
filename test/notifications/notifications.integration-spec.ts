@@ -32,7 +32,6 @@ describe('Notification Module (Event-Driven Integration)', () => {
   });
 
   describe('Notification Trigger Listener', () => {
-
     it('should successfully save a notification in DB when notification.trigger event is emitted', async () => {
       const user = await prisma.user.create({
         data: {
@@ -41,7 +40,6 @@ describe('Notification Module (Event-Driven Integration)', () => {
           firstName: 'Omar',
           lastName: 'Ali',
           status: 'ACTIVE',
-
         },
       });
 
@@ -63,27 +61,31 @@ describe('Notification Module (Event-Driven Integration)', () => {
           type: 'NEW_PRESCRIPTION',
         },
       });
-      
+
       expect(savedNotification).toBeDefined();
       expect(savedNotification?.isRead).toBe(false);
-      
+
       const metadataString = JSON.stringify(savedNotification?.metadata || {});
       expect(metadataString).toContain('Dr. Ahmed Salah');
     });
 
-  it(' should handle gracefully and not crash the server if userId does not exist', async () => {
-    const fakeUserId = '00000000-0000-0000-0000-000000000000';
-    try {
-      eventEmitter.emit('notification.trigger', {
-        userId: fakeUserId,
-        type: 'NEW_PRESCRIPTION',
-        data: { prescriptionId: '123', doctorName: 'Dr. Test', actionUrl: '/' },
-      });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    } catch (err) {
-      expect(err).toBeDefined();
-    }
-  });
+    it(' should handle gracefully and not crash the server if userId does not exist', async () => {
+      const fakeUserId = '00000000-0000-0000-0000-000000000000';
+      try {
+        eventEmitter.emit('notification.trigger', {
+          userId: fakeUserId,
+          type: 'NEW_PRESCRIPTION',
+          data: {
+            prescriptionId: '123',
+            doctorName: 'Dr. Test',
+            actionUrl: '/',
+          },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (err) {
+        expect(err).toBeDefined();
+      }
+    });
 
     it('should handle safely if data payload contains missing or incomplete fields', async () => {
       const user = await prisma.user.create({

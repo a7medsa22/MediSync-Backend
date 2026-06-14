@@ -11,16 +11,18 @@ import { ConfigService } from '@nestjs/config';
 @Module({
   imports: [
     JwtModule.registerAsync({
-          useFactory: async (config: ConfigService) => ({
-            secret: config.get('JWT_SECRET'),
-            signOptions: { expiresIn: config.get('JWT_EXPIRES_IN') },
-          }),
-          inject: [ConfigService],
-        }),
-    PrismaModule, ChatModule,
-    EventEmitterModule.forRoot()],
+      useFactory: async (config: ConfigService) => ({
+        secret: config.get('JWT_SECRET'),
+        signOptions: { expiresIn: config.get('JWT_EXPIRES_IN') },
+      }),
+      inject: [ConfigService],
+    }),
+    PrismaModule,
+    ChatModule,
+    EventEmitterModule.forRoot(),
+  ],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationsGateway],
   exports: [NotificationsService],
 })
-export class NotificationsModule { }
+export class NotificationsModule {}

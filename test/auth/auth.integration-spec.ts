@@ -7,11 +7,15 @@ import { UserRole, UserStatus } from '@prisma/client';
 
 // Helper function to handle rate limiting
 const waitForRateLimit = async (ms: number = 1000) => {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 // Helper function to make login with flexible error handling
-const loginWithFlexibleRetry = async (app: INestApplication, email: string, password: string): Promise<any> => {
+const loginWithFlexibleRetry = async (
+  app: INestApplication,
+  email: string,
+  password: string,
+): Promise<any> => {
   // Try login once, if it fails due to rate limit, that's expected behavior
   try {
     const response = await request(app.getHttpServer())
@@ -75,7 +79,9 @@ describe('Auth Flow (Integration)', () => {
         .expect(201);
 
       expect(response.body.data.userId).toBe(tempUserId);
-      expect(response.body.data.status).toBe(UserStatus.PENDING_EMAIL_VERIFICATION);
+      expect(response.body.data.status).toBe(
+        UserStatus.PENDING_EMAIL_VERIFICATION,
+      );
     });
 
     it('should verify email (Step 3)', async () => {
@@ -215,10 +221,9 @@ describe('Auth Flow (Integration)', () => {
         .post('/api/v1/auth/verify-reset-otp')
         .send({
           userId: user.id,
-          otp: otpRecord!.code
+          otp: otpRecord!.code,
         })
         .expect(200);
-        
 
       resetToken = response.body.data.resetToken;
       expect(resetToken).toBeDefined();
@@ -226,7 +231,7 @@ describe('Auth Flow (Integration)', () => {
 
     it('should reset password', async () => {
       expect(resetToken).toBeDefined();
-      
+
       await request(app.getHttpServer())
         .post('/api/v1/auth/reset-password')
         .send({
@@ -260,7 +265,7 @@ describe('Auth Flow (Integration)', () => {
         .post('/api/v1/auth/resend-otp')
         .send({
           userId: user.id,
-          type: 'EMAIL_VERIFICATION'
+          type: 'EMAIL_VERIFICATION',
         })
         .expect(200);
 
@@ -292,7 +297,7 @@ describe('Auth Flow (Integration)', () => {
         .post('/api/v1/auth/resend-otp')
         .send({
           userId: activeUser.id,
-          type: 'PASSWORD_RESET'
+          type: 'PASSWORD_RESET',
         })
         .expect(200);
 
@@ -308,7 +313,7 @@ describe('Auth Flow (Integration)', () => {
         .post('/api/v1/auth/resend-otp')
         .send({
           userId: 'invalid-uuid',
-          type: 'EMAIL_VERIFICATION'
+          type: 'EMAIL_VERIFICATION',
         })
         .expect(400);
     });
@@ -339,7 +344,6 @@ describe('Auth Flow (Integration)', () => {
         .post('/api/v1/auth/login')
         .send({ email: user.email, password: oldPassword });
       accessToken = loginRes.body.data.accessToken;
-
     });
 
     it('should change password successfully', async () => {
@@ -353,7 +357,6 @@ describe('Auth Flow (Integration)', () => {
         .expect(200);
     });
     it('should fail with invalid current password', async () => {
-
       await request(app.getHttpServer())
         .post('/api/v1/auth/change-password')
         .set('Authorization', `Bearer ${accessToken}`)

@@ -98,7 +98,9 @@ describe('SpecializationsController', () => {
   describe('getPopularSpecializations', () => {
     it('should call service.getPopularSpecializations with limit', async () => {
       const limit = 5;
-      mockSpecializationsService.getPopularSpecializations.mockResolvedValue([]);
+      mockSpecializationsService.getPopularSpecializations.mockResolvedValue(
+        [],
+      );
       await controller.getPopularSpecializations(limit);
       expect(
         mockSpecializationsService.getPopularSpecializations,

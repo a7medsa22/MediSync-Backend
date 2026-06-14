@@ -17,7 +17,10 @@ export class MedicationDto {
   @IsString()
   @MinLength(2)
   @MaxLength(255)
-  @ApiProperty({ description: 'Name of the medication', example: 'Amoxicillin' })
+  @ApiProperty({
+    description: 'Name of the medication',
+    example: 'Amoxicillin',
+  })
   drugName!: string;
 
   @IsString()
@@ -33,22 +36,34 @@ export class MedicationDto {
   @IsString()
   @MinLength(1)
   @MaxLength(30)
-  @ApiProperty({ description: 'Duration of the medication course', example: '7 days' })
+  @ApiProperty({
+    description: 'Duration of the medication course',
+    example: '7 days',
+  })
   duration!: string; // e.g., "7 days"
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ description: 'Additional instructions for the medication', example: 'Take after meals' })
+  @ApiProperty({
+    description: 'Additional instructions for the medication',
+    example: 'Take after meals',
+  })
   instructions?: string; // e.g., "After meals"
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ description: 'Side effects of the medication', example: 'Nausea' })
+  @ApiProperty({
+    description: 'Side effects of the medication',
+    example: 'Nausea',
+  })
   sideEffects?: string;
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ description: 'Warnings for the medication', example: 'Avoid if allergic to penicillin' })
+  @ApiProperty({
+    description: 'Warnings for the medication',
+    example: 'Avoid if allergic to penicillin',
+  })
   warnings?: string;
 }
 
@@ -60,12 +75,18 @@ export class MedicationResponseDto extends MedicationDto {
 export class CreatePrescriptionTemplateDto {
   @IsString()
   @IsNotEmpty()
-  @ApiProperty({ description: 'Name of the prescription template', example: 'Standard Template' })
+  @ApiProperty({
+    description: 'Name of the prescription template',
+    example: 'Standard Template',
+  })
   name: string;
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ description: 'Notes of the prescription template', example: 'Standard prescription template for common conditions' })
+  @ApiProperty({
+    description: 'Notes of the prescription template',
+    example: 'Standard prescription template for common conditions',
+  })
   notes?: string;
 
   @ArrayNotEmpty()
@@ -88,7 +109,8 @@ export class UpdatePrescriptionTemplateDto {
   @ValidateNested({ each: true })
   @Type(() => MedicationDto)
   @ApiProperty({
-    description: 'Medications in the prescription template', example: [
+    description: 'Medications in the prescription template',
+    example: [
       {
         drugName: 'Amoxicillin',
         dosage: '500mg',
@@ -98,10 +120,9 @@ export class UpdatePrescriptionTemplateDto {
         sideEffects: 'Nausea',
         warnings: 'Avoid if allergic to penicillin',
       },
-    ]
+    ],
   })
   medications?: MedicationDto[];
-
 }
 // ============= drug interactions DTOs =============
 export class CheckInteractionsDto {
@@ -111,7 +132,9 @@ export class CheckInteractionsDto {
   })
   @IsArray()
   @IsString({ each: true })
-  @ArrayMinSize(2, { message: 'You must provide at least two drugs to check interactions.' })
+  @ArrayMinSize(2, {
+    message: 'You must provide at least two drugs to check interactions.',
+  })
   @IsNotEmpty({ each: true })
   drugNames: string[];
 }

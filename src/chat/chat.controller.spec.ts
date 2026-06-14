@@ -179,7 +179,11 @@ describe('ChatController', () => {
       mockMessageService.getMessages.mockResolvedValue(mockMessages);
 
       const query = { page: 1, limit: 20 };
-      const result = await controller.getMessages('chat-abc', query as any, mockUser.sub);
+      const result = await controller.getMessages(
+        'chat-abc',
+        query as any,
+        mockUser.sub,
+      );
 
       expect(result).toEqual(mockMessages);
       expect(mockMessageService.getMessages).toHaveBeenCalledWith(
@@ -234,7 +238,10 @@ describe('ChatController', () => {
       const updatedMessage = { ...mockMessage, isRead: true };
       mockMessageService.markAsRead.mockResolvedValue(updatedMessage);
 
-      const result = await controller.markMessageAsRead('msg-001', mockUser.sub);
+      const result = await controller.markMessageAsRead(
+        'msg-001',
+        mockUser.sub,
+      );
 
       expect(result).toEqual(updatedMessage);
       expect(mockMessageService.markAsRead).toHaveBeenCalledWith(
@@ -311,7 +318,10 @@ describe('ChatController', () => {
     it('should return chat-specific unread count', async () => {
       mockMessageService.getUnreadCount.mockResolvedValue(2);
 
-      const result = await controller.getChatUnreadCount('chat-abc', mockUser.sub);
+      const result = await controller.getChatUnreadCount(
+        'chat-abc',
+        mockUser.sub,
+      );
 
       expect(result).toEqual({ count: 2 });
       expect(mockMessageService.getUnreadCount).toHaveBeenCalledWith(

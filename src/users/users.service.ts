@@ -16,7 +16,7 @@ export type UserWithoutPassword = Omit<User, 'password'>;
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   // ---------logics
   async findByEmail(email: string) {

@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { SlotGeneratorService } from './slot-generator.service';
 import { AvailabilityValidationHelpers } from './availability-validation.helpers';
 import { TimeUtils } from '../../common/utils/time.utils';
@@ -25,20 +30,38 @@ export class AvailabilityService {
    * Create doctor's availability for a specific day and time
    */
   async createAvailability(doctorId: string, createDto: CreateAvailabilityDto) {
-    const { dayOfWeek, startTime, endTime, slotDuration = 30, maxAppointmentsPerDay = 10 } = createDto;
+    const {
+      dayOfWeek,
+      startTime,
+      endTime,
+      slotDuration = 30,
+      maxAppointmentsPerDay = 10,
+    } = createDto;
 
     // Validate time range
     AvailabilityValidationHelpers.validateTimeRange(startTime, endTime);
 
     // Validate slot duration and max appointments
     AvailabilityValidationHelpers.validateSlotDuration(slotDuration);
-    AvailabilityValidationHelpers.validateMaxAppointments(maxAppointmentsPerDay);
+    AvailabilityValidationHelpers.validateMaxAppointments(
+      maxAppointmentsPerDay,
+    );
 
     // Check for overlapping availability windows
-    await this.validationHelpers.validateNoAvailabilityOverlap(doctorId, dayOfWeek, startTime, endTime);
+    await this.validationHelpers.validateNoAvailabilityOverlap(
+      doctorId,
+      dayOfWeek,
+      startTime,
+      endTime,
+    );
 
     // Check for duplicate availability
-    await this.validationHelpers.validateNoDuplicateAvailability(doctorId, dayOfWeek, startTime, endTime);
+    await this.validationHelpers.validateNoDuplicateAvailability(
+      doctorId,
+      dayOfWeek,
+      startTime,
+      endTime,
+    );
 
     const availability = await this.prisma.doctorAvailability.create({
       data: {
@@ -72,7 +95,9 @@ export class AvailabilityService {
   ) {
     const { availabilities } = createDto;
 
-    type CreateAvailabilityResult = Awaited<ReturnType<AvailabilityService['createAvailability']>>;
+    type CreateAvailabilityResult = Awaited<
+      ReturnType<AvailabilityService['createAvailability']>
+    >;
     type CreateAvailabilityError = { dayOfWeek: DayOfWeek; error: string };
 
     const results: CreateAvailabilityResult[] = [];
@@ -84,7 +109,8 @@ export class AvailabilityService {
         const result = await this.createAvailability(doctorId, avail);
         results.push(result);
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        const message =
+          error instanceof Error ? error.message : 'Unknown error';
         errors.push({
           dayOfWeek: avail.dayOfWeek,
           error: message,
@@ -135,13 +161,25 @@ export class AvailabilityService {
     updateDto: UpdateAvailabilityDto,
   ) {
     // Validate ownership
-    await this.validationHelpers.validateDoctorOwnership(availabilityId, doctorId, 'availability');
+    await this.validationHelpers.validateDoctorOwnership(
+      availabilityId,
+      doctorId,
+      'availability',
+    );
 
     // Get current availability for validation
-    const currentAvailability = await this.prisma.doctorAvailability.findUnique({
-      where: { id: availabilityId },
-      select: { dayOfWeek: true, startTime: true, endTime: true, slotDuration: true, maxAppointmentsPerDay: true }
-    });
+    const currentAvailability = await this.prisma.doctorAvailability.findUnique(
+      {
+        where: { id: availabilityId },
+        select: {
+          dayOfWeek: true,
+          startTime: true,
+          endTime: true,
+          slotDuration: true,
+          maxAppointmentsPerDay: true,
+        },
+      },
+    );
 
     if (!currentAvailability) {
       throw new NotFoundException('Availability not found');
@@ -162,7 +200,7 @@ export class AvailabilityService {
         updateDto.dayOfWeek ?? currentAvailability.dayOfWeek,
         newStartTime,
         newEndTime,
-        availabilityId
+        availabilityId,
       );
 
       updateData.startTime = newStartTime;
@@ -171,13 +209,17 @@ export class AvailabilityService {
 
     // Validate slot duration
     if (updateDto.slotDuration !== undefined) {
-      AvailabilityValidationHelpers.validateSlotDuration(updateDto.slotDuration);
+      AvailabilityValidationHelpers.validateSlotDuration(
+        updateDto.slotDuration,
+      );
       updateData.slotDuration = updateDto.slotDuration;
     }
 
     // Validate max appointments
     if (updateDto.maxAppointmentsPerDay !== undefined) {
-      AvailabilityValidationHelpers.validateMaxAppointments(updateDto.maxAppointmentsPerDay);
+      AvailabilityValidationHelpers.validateMaxAppointments(
+        updateDto.maxAppointmentsPerDay,
+      );
       updateData.maxAppointmentsPerDay = updateDto.maxAppointmentsPerDay;
     }
 
@@ -207,7 +249,11 @@ export class AvailabilityService {
    */
   async deleteAvailability(doctorId: string, availabilityId: string) {
     // Validate ownership
-    await this.validationHelpers.validateDoctorOwnership(availabilityId, doctorId, 'availability');
+    await this.validationHelpers.validateDoctorOwnership(
+      availabilityId,
+      doctorId,
+      'availability',
+    );
 
     await this.prisma.doctorAvailability.update({
       where: { id: availabilityId },
@@ -227,10 +273,20 @@ export class AvailabilityService {
     AvailabilityValidationHelpers.validateTimeRange(startTime, endTime);
 
     // Check for overlapping breaks
-    await this.validationHelpers.validateNoBreakOverlap(doctorId, dayOfWeek, startTime, endTime);
+    await this.validationHelpers.validateNoBreakOverlap(
+      doctorId,
+      dayOfWeek,
+      startTime,
+      endTime,
+    );
 
     // Ensure break fits entirely inside a matching availability window
-    await this.validationHelpers.validateBreakWithinAvailability(doctorId, dayOfWeek, startTime, endTime);
+    await this.validationHelpers.validateBreakWithinAvailability(
+      doctorId,
+      dayOfWeek,
+      startTime,
+      endTime,
+    );
 
     const breakRecord = await this.prisma.doctorBreak.create({
       data: {
@@ -280,12 +336,16 @@ export class AvailabilityService {
     updateDto: UpdateBreakDto,
   ) {
     // Validate ownership
-    await this.validationHelpers.validateDoctorOwnership(breakId, doctorId, 'break');
+    await this.validationHelpers.validateDoctorOwnership(
+      breakId,
+      doctorId,
+      'break',
+    );
 
     // Get current break for validation
     const currentBreak = await this.prisma.doctorBreak.findUnique({
       where: { id: breakId },
-      select: { dayOfWeek: true, startTime: true, endTime: true }
+      select: { dayOfWeek: true, startTime: true, endTime: true },
     });
 
     if (!currentBreak) {
@@ -304,10 +364,21 @@ export class AvailabilityService {
       AvailabilityValidationHelpers.validateTimeRange(newStartTime, newEndTime);
 
       // Check for overlaps (exclude current break)
-      await this.validationHelpers.validateNoBreakOverlap(doctorId, newDayOfWeek, newStartTime, newEndTime, breakId);
+      await this.validationHelpers.validateNoBreakOverlap(
+        doctorId,
+        newDayOfWeek,
+        newStartTime,
+        newEndTime,
+        breakId,
+      );
 
       // Ensure break fits within availability
-      await this.validationHelpers.validateBreakWithinAvailability(doctorId, newDayOfWeek, newStartTime, newEndTime);
+      await this.validationHelpers.validateBreakWithinAvailability(
+        doctorId,
+        newDayOfWeek,
+        newStartTime,
+        newEndTime,
+      );
 
       updateData.startTime = newStartTime;
       updateData.endTime = newEndTime;
@@ -341,7 +412,11 @@ export class AvailabilityService {
    */
   async deleteBreak(doctorId: string, breakId: string) {
     // Validate ownership
-    await this.validationHelpers.validateDoctorOwnership(breakId, doctorId, 'break');
+    await this.validationHelpers.validateDoctorOwnership(
+      breakId,
+      doctorId,
+      'break',
+    );
 
     await this.prisma.doctorBreak.delete({
       where: { id: breakId },
@@ -363,7 +438,10 @@ export class AvailabilityService {
     const normalizedDate = TimeUtils.normalizeDate(dayOffDate);
 
     // Check for duplicate day-off
-    await this.validationHelpers.validateNoDuplicateDayOff(doctorId, normalizedDate);
+    await this.validationHelpers.validateNoDuplicateDayOff(
+      doctorId,
+      normalizedDate,
+    );
 
     const dayOff = await this.prisma.doctorDayOff.create({
       data: {
@@ -390,7 +468,9 @@ export class AvailabilityService {
   ) {
     const { daysOff } = createDto;
 
-    type CreateDayOffResult = Awaited<ReturnType<AvailabilityService['createDayOff']>>;
+    type CreateDayOffResult = Awaited<
+      ReturnType<AvailabilityService['createDayOff']>
+    >;
     type CreateDayOffError = { date: string; error: string };
 
     const results: CreateDayOffResult[] = [];
@@ -401,7 +481,8 @@ export class AvailabilityService {
         const result = await this.createDayOff(doctorId, dayOff);
         results.push(result);
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        const message =
+          error instanceof Error ? error.message : 'Unknown error';
         errors.push({
           date: dayOff.date,
           error: message,
@@ -447,7 +528,11 @@ export class AvailabilityService {
    */
   async deleteDayOff(doctorId: string, dayOffId: string) {
     // Validate ownership
-    await this.validationHelpers.validateDoctorOwnership(dayOffId, doctorId, 'dayOff');
+    await this.validationHelpers.validateDoctorOwnership(
+      dayOffId,
+      doctorId,
+      'dayOff',
+    );
 
     await this.prisma.doctorDayOff.delete({
       where: { id: dayOffId },

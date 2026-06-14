@@ -78,9 +78,12 @@ describe('NotificationsService', () => {
         },
       } as any);
 
-      const createArg = (prisma.notification.create as jest.Mock).mock.calls[0][0];
+      const createArg = (prisma.notification.create as jest.Mock).mock
+        .calls[0][0];
       expect(createArg.data.title).toBe('New Connection Request');
-      expect(createArg.data.message).toBe('Ahmed sent you a connection request');
+      expect(createArg.data.message).toBe(
+        'Ahmed sent you a connection request',
+      );
 
       // normalized metadata should include handler metadata + defaults
       expect(createArg.data.metadata).toMatchObject({
@@ -90,10 +93,14 @@ describe('NotificationsService', () => {
         targetType: 'user',
       });
 
-      expect(gateway.emitToUser).toHaveBeenCalledWith('user-1', 'notification_created', {
-        notification: { id: 'n1', userId: 'user-1' },
-        unreadCount: 3,
-      });
+      expect(gateway.emitToUser).toHaveBeenCalledWith(
+        'user-1',
+        'notification_created',
+        {
+          notification: { id: 'n1', userId: 'user-1' },
+          unreadCount: 3,
+        },
+      );
     });
 
     it('should respect provided actionUrl/targetId/targetType overrides', async () => {
@@ -119,7 +126,8 @@ describe('NotificationsService', () => {
         },
       } as any);
 
-      const createArg = (prisma.notification.create as jest.Mock).mock.calls[0][0];
+      const createArg = (prisma.notification.create as jest.Mock).mock
+        .calls[0][0];
       expect(createArg.data.metadata).toMatchObject({
         senderId: 'u-2',
         conversationId: 'c-1',
@@ -128,10 +136,14 @@ describe('NotificationsService', () => {
         targetType: 'doctor',
       });
 
-      expect(gateway.emitToUser).toHaveBeenCalledWith('user-1', 'notification_created', {
-        notification: { id: 'n2', userId: 'user-1' },
-        unreadCount: 0,
-      });
+      expect(gateway.emitToUser).toHaveBeenCalledWith(
+        'user-1',
+        'notification_created',
+        {
+          notification: { id: 'n2', userId: 'user-1' },
+          unreadCount: 0,
+        },
+      );
     });
 
     it('should use handler fallback (SYSTEM_DEFAULT) when type is not present in registry', async () => {
@@ -156,7 +168,8 @@ describe('NotificationsService', () => {
         },
       } as any);
 
-      const createArg = (prisma.notification.create as jest.Mock).mock.calls[0][0];
+      const createArg = (prisma.notification.create as jest.Mock).mock
+        .calls[0][0];
 
       expect(createArg.data.title).toBe('System Notification');
       expect(createArg.data.message).toBe('A system event occurred: SCAN_OK');
@@ -178,7 +191,7 @@ describe('NotificationsService', () => {
       const oldRegistry = notificationRegistry as any;
       const key = 1234 as any;
 
-      (oldRegistry as any)[key] = {} as any;
+      oldRegistry[key] = {} as any;
 
       await expect(
         service.createNotification({
@@ -196,7 +209,9 @@ describe('NotificationsService', () => {
       const prisma = (service as any).prisma;
       const gateway = (service as any).notificationsGateway;
 
-      (prisma.notification.create as jest.Mock).mockRejectedValue(new Error('DB error'));
+      (prisma.notification.create as jest.Mock).mockRejectedValue(
+        new Error('DB error'),
+      );
 
       await expect(
         service.createNotification({
@@ -260,7 +275,10 @@ describe('NotificationsService', () => {
   describe('mutations', () => {
     it('markAsRead should set isRead=true by id', async () => {
       const prisma = (service as any).prisma;
-      (prisma.notification.update as jest.Mock).mockResolvedValue({ id: 'n1', isRead: true });
+      (prisma.notification.update as jest.Mock).mockResolvedValue({
+        id: 'n1',
+        isRead: true,
+      });
 
       await service.markAsRead('n1');
 
@@ -272,7 +290,9 @@ describe('NotificationsService', () => {
 
     it('markAllAsRead should updateMany user notifications where isRead=false', async () => {
       const prisma = (service as any).prisma;
-      (prisma.notification.updateMany as jest.Mock).mockResolvedValue({ count: 2 });
+      (prisma.notification.updateMany as jest.Mock).mockResolvedValue({
+        count: 2,
+      });
 
       await service.markAllAsRead('user-1');
 
@@ -296,7 +316,9 @@ describe('NotificationsService', () => {
 
   describe('event listeners', () => {
     it('handleConnectionAccepted should call createNotification with CONNECTION_ACCEPTED and correct metadata', async () => {
-      const spy = jest.spyOn(service, 'createNotification').mockResolvedValue(undefined as any);
+      const spy = jest
+        .spyOn(service, 'createNotification')
+        .mockResolvedValue(undefined as any);
 
       await service.handleConnectionAccepted({
         userId: 'patient-1',

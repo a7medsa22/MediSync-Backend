@@ -200,7 +200,6 @@ export class RequestsController {
   //     body,
   //   );
   // }
-
   @Put('connections/:id/deactivate')
   @UseGuards(OwnershipGuard)
   @Owner('id')

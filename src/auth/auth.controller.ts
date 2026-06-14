@@ -166,7 +166,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'User login',
-    description: 'Authenticate user using email and password to receive access and refresh tokens.',
+    description:
+      'Authenticate user using email and password to receive access and refresh tokens.',
   })
   @ApiBody({ type: LoginDto })
   @ApiResponse({

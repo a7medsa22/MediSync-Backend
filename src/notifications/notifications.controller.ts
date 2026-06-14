@@ -1,4 +1,12 @@
-import { Controller, Get, Patch, Delete, Param, Query, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { ApiAuth } from 'src/common/decorators/api-auth.decorator';
@@ -16,11 +24,18 @@ export class NotificationsController {
     @Query('cursor_id') cursorId?: string,
     @Query('cursor_date') cursorDate?: string,
   ) {
-    const paginationParams = cursorId && cursorDate 
-      ? { cursor: { id: cursorId, createdAt: cursorDate }, limit: limit ? +limit : 10 }
-      : { limit: limit ? +limit : 10 };
+    const paginationParams =
+      cursorId && cursorDate
+        ? {
+            cursor: { id: cursorId, createdAt: cursorDate },
+            limit: limit ? +limit : 10,
+          }
+        : { limit: limit ? +limit : 10 };
 
-    return this.notificationsService.getUserNotifications(userId, paginationParams);
+    return this.notificationsService.getUserNotifications(
+      userId,
+      paginationParams,
+    );
   }
 
   @Get('unread-count')

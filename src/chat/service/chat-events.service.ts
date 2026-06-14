@@ -51,7 +51,7 @@ export class ChatEventsService {
           messageId: message.id,
           senderId: userId,
         },
-    });
+      });
     }
 
     return message;

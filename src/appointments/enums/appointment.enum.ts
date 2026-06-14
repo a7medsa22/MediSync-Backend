@@ -1,4 +1,4 @@
-import { AppointmentStatus } from "@prisma/client"
+import { AppointmentStatus } from '@prisma/client';
 
 export enum AppointmentStatusEnum {
   PENDING = 'PENDING',
@@ -6,7 +6,7 @@ export enum AppointmentStatusEnum {
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
-  NO_SHOW = 'NO_SHOW'
+  NO_SHOW = 'NO_SHOW',
 }
 
 export enum CancelAppointmentReason {
@@ -15,5 +15,5 @@ export enum CancelAppointmentReason {
   EMERGENCY = 'EMERGENCY',
   NO_SHOW = 'NO_SHOW',
   AUTO_EXPIRED = 'AUTO_EXPIRED',
-  OTHER = 'AUTO_EXPIRED'
+  OTHER = 'AUTO_EXPIRED',
 }

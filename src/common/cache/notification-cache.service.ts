@@ -15,7 +15,7 @@ export class NotificationCacheService {
   async getUnreadCount(userId: string) {
     const key = CacheKeys.notification.unreadCount(userId);
     const cached = await this.redis.get<number>(key);
-    
+
     if (cached !== null) return cached;
 
     const count = await this.prisma.notification.count({

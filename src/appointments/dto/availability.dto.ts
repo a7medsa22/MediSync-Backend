@@ -1,4 +1,15 @@
-import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { DayOfWeek } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -8,13 +19,19 @@ export class CreateAvailabilityDto {
   @IsEnum(DayOfWeek)
   dayOfWeek!: DayOfWeek;
 
-  @ApiProperty({ example: 480, description: 'Start time in minutes from midnight' })
+  @ApiProperty({
+    example: 480,
+    description: 'Start time in minutes from midnight',
+  })
   @IsInt()
   @Min(0)
   @Max(1440)
   startTime!: number; // minutes from midnight
 
-  @ApiProperty({ example: 1020, description: 'End time in minutes from midnight' })
+  @ApiProperty({
+    example: 1020,
+    description: 'End time in minutes from midnight',
+  })
   @IsInt()
   @Min(0)
   @Max(1440)

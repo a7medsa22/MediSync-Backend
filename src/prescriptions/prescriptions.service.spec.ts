@@ -15,7 +15,10 @@ describe('PrescriptionsService', () => {
       providers: [
         PrescriptionsService,
         { provide: PrismaService, useValue: {} },
-        { provide: EventEmitter2, useValue: { emit: jest.fn(), on: jest.fn(), off: jest.fn() } },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn(), on: jest.fn(), off: jest.fn() },
+        },
         { provide: PrescriptionCacheService, useValue: {} },
         { provide: UserCacheService, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },

@@ -128,7 +128,9 @@ describe('SlotGeneratorService', () => {
     // based on the test day start (timezone handling is internal, but overlap
     // checks are still safe because we only compare Date intervals).
     const dayBase = new Date('2026-01-06T00:00:00.000Z');
-    const breakStart = new Date(dayBase.getTime() + breakStartMinutes * 60 * 1000);
+    const breakStart = new Date(
+      dayBase.getTime() + breakStartMinutes * 60 * 1000,
+    );
     const breakEnd = new Date(dayBase.getTime() + breakEndMinutes * 60 * 1000);
 
     const hasOverlap = slots.some((slot) => {

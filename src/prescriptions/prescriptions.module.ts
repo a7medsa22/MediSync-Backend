@@ -18,4 +18,4 @@ import { PrismaModule } from 'src/prisma/prisma.module';
   ],
   exports: [PrescriptionsService],
 })
-export class PrescriptionsModule { }
+export class PrescriptionsModule {}

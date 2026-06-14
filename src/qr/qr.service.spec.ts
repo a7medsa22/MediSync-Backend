@@ -60,7 +60,10 @@ describe('QrService', () => {
         { provide: ConfigService, useValue: mockConfigService },
         { provide: QrProvider, useValue: mockQrProvider },
         { provide: NotificationsService, useValue: mockNotificationsService },
-        { provide: EventEmitter2, useValue: { emit: jest.fn(), on: jest.fn(), off: jest.fn() } },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn(), on: jest.fn(), off: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -108,18 +111,18 @@ describe('QrService', () => {
 
     it('should throw NotFoundException if doctor not found', async () => {
       mockPrismaService.doctor.findUnique.mockResolvedValue(null);
-      await expect(
-        service.generateConnectionQr(doctorId, dto),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.generateConnectionQr(doctorId, dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException if doctor is not active', async () => {
       mockPrismaService.doctor.findUnique.mockResolvedValue({
         user: { status: 'INACTIVE' },
       });
-      await expect(
-        service.generateConnectionQr(doctorId, dto),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.generateConnectionQr(doctorId, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -206,19 +209,31 @@ describe('QrService', () => {
       const patient = {
         id: patientId,
         userId: 'u-pat',
-        user: { firstName: 'Pat', lastName: 'Ient', status: 'ACTIVE', email: 'p@p.com' },
+        user: {
+          firstName: 'Pat',
+          lastName: 'Ient',
+          status: 'ACTIVE',
+          email: 'p@p.com',
+        },
       };
       const doctor = {
         id: 'doc-1',
         userId: 'u-doc',
-        user: { firstName: 'Doc', lastName: 'Tor', status: 'ACTIVE', email: 'd@d.com' },
+        user: {
+          firstName: 'Doc',
+          lastName: 'Tor',
+          status: 'ACTIVE',
+          email: 'd@d.com',
+        },
         specialization: { name: 'GP' },
       };
 
       jest.spyOn(service, 'validateToken').mockResolvedValue(qrToken as any);
       mockPrismaService.patient.findUnique.mockResolvedValue(patient);
       mockPrismaService.doctor.findUnique.mockResolvedValue(doctor);
-      mockPrismaService.doctorPatientConnection.findUnique.mockResolvedValue(null);
+      mockPrismaService.doctorPatientConnection.findUnique.mockResolvedValue(
+        null,
+      );
       mockPrismaService.doctorPatientConnection.create.mockResolvedValue({
         id: 'conn-1',
         status: 'ACTIVE',
@@ -236,7 +251,9 @@ describe('QrService', () => {
       );
 
       expect(mockPrismaService.qrToken.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ isUsed: true }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ isUsed: true }),
+        }),
       );
     });
   });

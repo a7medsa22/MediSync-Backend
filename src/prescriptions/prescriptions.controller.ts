@@ -20,16 +20,25 @@ import { ApiAuth } from 'src/common/decorators/api-auth.decorator';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { PrescriptionStatus, UserRole } from '@prisma/client';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import { CreatePrescriptionDto, CreatePrescriptionFromTemplateDto } from './dto/create-prescription.dto';
-import { CheckInteractionsDto, CreatePrescriptionTemplateDto, UpdatePrescriptionTemplateDto } from './dto/medication.dto';
+import {
+  CreatePrescriptionDto,
+  CreatePrescriptionFromTemplateDto,
+} from './dto/create-prescription.dto';
+import {
+  CheckInteractionsDto,
+  CreatePrescriptionTemplateDto,
+  UpdatePrescriptionTemplateDto,
+} from './dto/medication.dto';
 import { InjectPatientIdGuard } from 'src/auth/guards/inject-patientId.guard';
 import { PrescriptionRenewalService } from './services/prescription-renewal.service';
-import { ApprovePrescriptionRenewalDto, ReasonPrescriptionRenewalDto } from './dto/renewal.dto';
+import {
+  ApprovePrescriptionRenewalDto,
+  ReasonPrescriptionRenewalDto,
+} from './dto/renewal.dto';
 import { InjectDoctorIdGuard } from 'src/auth/guards/inject-doctorId.guard';
 import { PrescriptionPdfService } from './services/prescription-pdf.service';
 import { PrescriptionTemplateService } from './services/prescriptions.tempalet.service';
 import express from 'express';
-
 
 @ApiTags('Prescriptions')
 @ApiAuth()
@@ -39,8 +48,8 @@ export class PrescriptionsController {
     private readonly prescriptionsService: PrescriptionsService,
     private readonly prescriptionRenewalService: PrescriptionRenewalService,
     private readonly prescriptionTemplateService: PrescriptionTemplateService,
-    private readonly prescriptionPdfService: PrescriptionPdfService
-  ) { }
+    private readonly prescriptionPdfService: PrescriptionPdfService,
+  ) {}
 
   // ===============================================
   // CREATE PRESCRIPTION (Doctor only)
@@ -67,10 +76,7 @@ export class PrescriptionsController {
     @CurrentUser('sub') userId: string,
     @Body() body: CreatePrescriptionDto,
   ) {
-    return this.prescriptionsService.createPrescription(
-      userId,
-      body,
-    );
+    return this.prescriptionsService.createPrescription(userId, body);
   }
   @Post('/from-template')
   @Roles(UserRole.DOCTOR)
@@ -112,11 +118,10 @@ export class PrescriptionsController {
   @UseGuards(InjectDoctorIdGuard)
   @ApiOperation({
     summary: 'Get Template Statistics',
-    description: 'Doctor retrieves usage statistics for a prescription template.',
+    description:
+      'Doctor retrieves usage statistics for a prescription template.',
   })
-  async getTemplateStats(
-    @CurrentUser('doctorId') doctorId: string,
-  ) {
+  async getTemplateStats(@CurrentUser('doctorId') doctorId: string) {
     return this.prescriptionTemplateService.getTemplateStats(doctorId);
   }
 
@@ -176,7 +181,8 @@ export class PrescriptionsController {
   @UseGuards(InjectDoctorIdGuard)
   @ApiOperation({
     summary: 'Deactivate Prescription Template',
-    description: 'Doctor deactivates a prescription template so it is no longer available for use.',
+    description:
+      'Doctor deactivates a prescription template so it is no longer available for use.',
   })
   @ApiParam({ name: 'id', description: 'Template ID' })
   async deactivateTemplate(
@@ -265,9 +271,7 @@ export class PrescriptionsController {
     status: 200,
     description: 'Prescriptions retrieved successfully',
   })
-  async getMyPrescriptions(
-    @CurrentUser('patientId') patientId: string,
-  ) {
+  async getMyPrescriptions(@CurrentUser('patientId') patientId: string) {
     return this.prescriptionsService.getMyPrescriptions(patientId);
   }
 
@@ -287,10 +291,7 @@ export class PrescriptionsController {
     @Param('patientId', ParseUUIDPipe) patientId: string,
     @CurrentUser('sub') userId: string,
   ) {
-    return this.prescriptionsService.getPatientPrescriptions(
-      userId,
-      patientId,
-    );
+    return this.prescriptionsService.getPatientPrescriptions(userId, patientId);
   }
 
   @Get('doctor/prescriptions')
@@ -303,10 +304,7 @@ export class PrescriptionsController {
     @CurrentUser('sub') userId: string,
     @Query('stats') stats?: PrescriptionStatus,
   ) {
-    return this.prescriptionsService.getDoctorPrescriptions(
-      userId,
-      stats,
-    );
+    return this.prescriptionsService.getDoctorPrescriptions(userId, stats);
   }
 
   @Get(':id')
@@ -346,10 +344,7 @@ export class PrescriptionsController {
     @Param('id', ParseUUIDPipe) prescriptionId: string,
     @CurrentUser('sub') userId: string,
   ) {
-    return this.prescriptionsService.cancelPrescription(
-      prescriptionId,
-      userId,
-    );
+    return this.prescriptionsService.cancelPrescription(prescriptionId, userId);
   }
 
   // ==================== RENEWALS ====================
@@ -391,7 +386,7 @@ export class PrescriptionsController {
     return this.prescriptionRenewalService.approveRenewal(
       renewalId,
       userId,
-      approveDto
+      approveDto,
     );
   }
 
@@ -412,7 +407,7 @@ export class PrescriptionsController {
     return this.prescriptionRenewalService.rejectRenewal(
       renewalId,
       userId,
-      rejectDto
+      rejectDto,
     );
   }
 
@@ -423,15 +418,17 @@ export class PrescriptionsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Check drug-to-drug interactions in real-time',
-    description: 'Takes an array of drug names, checks the local Redis cache, or fetches from OpenFDA to detect severe/fatal interactions before creating the prescription.'
+    description:
+      'Takes an array of drug names, checks the local Redis cache, or fetches from OpenFDA to detect severe/fatal interactions before creating the prescription.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Interactions checked successfully. Returns an array of detected interactions and their severity levels.'
+    description:
+      'Interactions checked successfully. Returns an array of detected interactions and their severity levels.',
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad Request - Invalid drug names list provided.'
+    description: 'Bad Request - Invalid drug names list provided.',
   })
   async checkInteractions(@Body() dto: CheckInteractionsDto) {
     return this.prescriptionsService.checkDrugInteractions(dto.drugNames);
@@ -442,7 +439,7 @@ export class PrescriptionsController {
   @Get(':id/pdf')
   @ApiOperation({
     summary: 'Generate and stream prescription PDF on the fly',
-    description: 'Generate pharmacy-ready prescription PDF'
+    description: 'Generate pharmacy-ready prescription PDF',
   })
   @ApiParam({ name: 'id', description: 'Prescription ID' })
   async downloadPrescriptionPdf(
@@ -451,5 +448,4 @@ export class PrescriptionsController {
   ) {
     return this.prescriptionPdfService.generatePrescriptionPdf(id, res);
   }
-
 }

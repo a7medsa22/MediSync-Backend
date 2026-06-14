@@ -7,12 +7,23 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { CreatePrescriptionDto, CreatePrescriptionFromTemplateDto } from '../dto/create-prescription.dto';
+import {
+  CreatePrescriptionDto,
+  CreatePrescriptionFromTemplateDto,
+} from '../dto/create-prescription.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { PrescriptionAction, PrescriptionStatus, RenewalStatus, UserRole } from '@prisma/client';
+import {
+  PrescriptionAction,
+  PrescriptionStatus,
+  RenewalStatus,
+  UserRole,
+} from '@prisma/client';
 import { TimeUtils } from 'src/common/utils/time.utils';
 import { MedicationDto } from '../dto/medication.dto';
-import { DrugInteraction, PrescriptionCacheService } from 'src/common/cache/prescription-cache.service';
+import {
+  DrugInteraction,
+  PrescriptionCacheService,
+} from 'src/common/cache/prescription-cache.service';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -27,14 +38,10 @@ export class PrescriptionsService {
     private readonly userCache: UserCacheService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
-  ) { }
+  ) {}
   private readonly logger = new Logger(PrescriptionsService.name);
 
-
-  async createPrescription(
-    userId: string,
-    dto: CreatePrescriptionDto,
-  ) {
+  async createPrescription(userId: string, dto: CreatePrescriptionDto) {
     const connection = await this.validateConnection(dto.connectionId, userId);
 
     if (connection.status !== 'ACTIVE') {
@@ -55,7 +62,8 @@ export class PrescriptionsService {
 
     if (contraindicated.length > 0) {
       throw new BadRequestException({
-        message: 'Prescription rejected due to contraindicated drug interactions',
+        message:
+          'Prescription rejected due to contraindicated drug interactions',
         contraindicated,
       });
     }
@@ -119,7 +127,9 @@ export class PrescriptionsService {
 
     // Invalidate cache
     await this.userCache.invalidateUser(prescription.patientId);
-    await this.prescriptionCache.invalidatePatientPrescriptions(prescription.patientId);
+    await this.prescriptionCache.invalidatePatientPrescriptions(
+      prescription.patientId,
+    );
 
     //  Notify patient
     this.eventEmitter.emit('notification.trigger', {
@@ -139,8 +149,8 @@ export class PrescriptionsService {
   }
 
   /**
-  * Create prescription from template
-  */
+   * Create prescription from template
+   */
   async createPrescriptionFromTemplate(
     userId: string,
     createDto: CreatePrescriptionFromTemplateDto,
@@ -153,7 +163,6 @@ export class PrescriptionsService {
         doctor: { select: { userId: true } },
       },
     });
-
 
     if (!template || template.doctor.userId !== userId) {
       throw new NotFoundException('Template not found');
@@ -185,8 +194,6 @@ export class PrescriptionsService {
       expiresAt: createDto.expiresAt,
     });
   }
-
-
 
   // Get all prescriptions for a connection
   async getConnectionPrescriptions(
@@ -232,38 +239,39 @@ export class PrescriptionsService {
   }
   // Get all patient prescriptions (Patient view)
   async getMyPrescriptions(patientId: string) {
-
-    const cachedData = await this.prescriptionCache.getPatientPrescriptions(patientId);
+    const cachedData =
+      await this.prescriptionCache.getPatientPrescriptions(patientId);
     if (cachedData) return cachedData;
-
 
     const prescriptions = await this.prisma.prescription.findMany({
       where: { patientId },
       include: {
         doctor: {
-          select: { user: { select: { firstName: true, lastName: true } } }
+          select: { user: { select: { firstName: true, lastName: true } } },
         },
         connection: {
           select: { id: true, status: true },
         },
 
         prescriptionMedications: {
-          select: { drugName: true, dosage: true }
-        }
+          select: { drugName: true, dosage: true },
+        },
       },
       orderBy: {
         prescribedAt: 'desc',
       },
     });
 
-    await this.prescriptionCache.setPatientPrescriptions(patientId, prescriptions);
+    await this.prescriptionCache.setPatientPrescriptions(
+      patientId,
+      prescriptions,
+    );
 
     return prescriptions;
   }
 
   // Get all patient prescriptions (Doctor view)
   async getPatientPrescriptions(doctorId: string, patientId: string) {
-
     const connection = await this.prisma.doctorPatientConnection.findUnique({
       where: {
         doctorId_patientId: {
@@ -274,57 +282,77 @@ export class PrescriptionsService {
     });
 
     if (!connection)
-      throw new NotFoundException('No active connection found with this patient');
+      throw new NotFoundException(
+        'No active connection found with this patient',
+      );
 
-    let prescriptions = await this.prescriptionCache.getPatientPrescriptions(patientId);
+    let prescriptions =
+      await this.prescriptionCache.getPatientPrescriptions(patientId);
     if (!prescriptions) {
       prescriptions = await this.prisma.prescription.findMany({
         where: { patientId },
         include: {
-          doctor: { select: { user: { select: { firstName: true, lastName: true } } } },
+          doctor: {
+            select: { user: { select: { firstName: true, lastName: true } } },
+          },
         },
         orderBy: {
           prescribedAt: 'desc',
         },
       });
     }
-    await this.prescriptionCache.cachePatientPrescriptions(patientId, prescriptions);
+    await this.prescriptionCache.cachePatientPrescriptions(
+      patientId,
+      prescriptions,
+    );
 
     return {
       all: prescriptions,
-      active: prescriptions.filter((p) => p.status === PrescriptionStatus.ACTIVE),
-      expired: prescriptions.filter((p) => p.status === PrescriptionStatus.EXPIRED),
-      cancelled: prescriptions.filter((p) => p.status === PrescriptionStatus.CANCELLED),
+      active: prescriptions.filter(
+        (p) => p.status === PrescriptionStatus.ACTIVE,
+      ),
+      expired: prescriptions.filter(
+        (p) => p.status === PrescriptionStatus.EXPIRED,
+      ),
+      cancelled: prescriptions.filter(
+        (p) => p.status === PrescriptionStatus.CANCELLED,
+      ),
       stats: {
         total: prescriptions.length,
-        activeCount: prescriptions.filter((p) => p.status === PrescriptionStatus.ACTIVE).length,
+        activeCount: prescriptions.filter(
+          (p) => p.status === PrescriptionStatus.ACTIVE,
+        ).length,
       },
     };
   }
-
 
   //Get doctor's prescriptions with statistics
   async getDoctorPrescriptions(userId: string, stats?: PrescriptionStatus) {
     const doctor = await this.prisma.doctor.findUnique({
       where: { userId },
-      select: { id: true }
+      select: { id: true },
     });
-    if (!doctor)
-      throw new NotFoundException('Doctor profile not found');
+    if (!doctor) throw new NotFoundException('Doctor profile not found');
 
-    const doctorId = doctor?.id
+    const doctorId = doctor?.id;
     const prescriptions = await this.prisma.prescription.findMany({
       where: { doctorId, status: stats },
       include: {
-        patient: { select: { user: { select: { firstName: true, lastName: true } } } },
+        patient: {
+          select: { user: { select: { firstName: true, lastName: true } } },
+        },
       },
 
       orderBy: { prescribedAt: 'desc' },
     });
 
     const [activeCount, expiredCount, totalCount] = await Promise.all([
-      this.prisma.prescription.count({ where: { doctorId, status: PrescriptionStatus.ACTIVE } }),
-      this.prisma.prescription.count({ where: { doctorId, status: PrescriptionStatus.EXPIRED } }),
+      this.prisma.prescription.count({
+        where: { doctorId, status: PrescriptionStatus.ACTIVE },
+      }),
+      this.prisma.prescription.count({
+        where: { doctorId, status: PrescriptionStatus.EXPIRED },
+      }),
       this.prisma.prescription.count({ where: { doctorId } }),
     ]);
 
@@ -334,7 +362,7 @@ export class PrescriptionsService {
         total: totalCount,
         active: activeCount,
         expired: expiredCount,
-      }
+      },
     };
   }
   // GET SINGLE PRESCRIPTION
@@ -346,8 +374,18 @@ export class PrescriptionsService {
     const prescription = await this.prisma.prescription.findUnique({
       where: { id: prescriptionId },
       include: {
-        doctor: { select: { userId: true, user: { select: { firstName: true, lastName: true } } } },
-        patient: { select: { userId: true, user: { select: { firstName: true, lastName: true } } } },
+        doctor: {
+          select: {
+            userId: true,
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+        patient: {
+          select: {
+            userId: true,
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
         prescriptionMedications: true,
         renewals: true,
         history: { orderBy: { changedAt: 'desc' } },
@@ -362,7 +400,9 @@ export class PrescriptionsService {
       prescription.doctor.userId === userId;
 
     if (!isOwner) {
-      throw new ForbiddenException('You do not have permission to view this prescription');
+      throw new ForbiddenException(
+        'You do not have permission to view this prescription',
+      );
     }
     await this.prisma.prescriptionHistory.create({
       data: {
@@ -378,7 +418,11 @@ export class PrescriptionsService {
   }
 
   // CANCEL PRESCRIPTION (Doctor only)
-  async cancelPrescription(prescriptionId: string, userId: string, reason?: string) {
+  async cancelPrescription(
+    prescriptionId: string,
+    userId: string,
+    reason?: string,
+  ) {
     const doctor = await this.prisma.doctor.findUnique({
       where: { userId },
       select: { id: true },
@@ -390,8 +434,12 @@ export class PrescriptionsService {
     const prescription = await this.prisma.prescription.findUnique({
       where: { id: prescriptionId },
       select: {
-        doctorId: true, status: true, patientId: true,
-        doctor: { select: { user: { select: { firstName: true, lastName: true } } } }
+        doctorId: true,
+        status: true,
+        patientId: true,
+        doctor: {
+          select: { user: { select: { firstName: true, lastName: true } } },
+        },
       },
     });
 
@@ -432,13 +480,18 @@ export class PrescriptionsService {
 
       await tx.prescriptionRenewal.updateMany({
         where: { prescriptionId, status: RenewalStatus.PENDING },
-        data: { status: RenewalStatus.REJECTED, rejectionReason: reason || 'Doctor cancelled the prescription' },
+        data: {
+          status: RenewalStatus.REJECTED,
+          rejectionReason: reason || 'Doctor cancelled the prescription',
+        },
       });
       return result;
     });
 
     // Invalidate cache
-    await this.prescriptionCache.invalidatePatientPrescriptions(prescription.patientId);
+    await this.prescriptionCache.invalidatePatientPrescriptions(
+      prescription.patientId,
+    );
 
     // Notify patient
     this.eventEmitter.emit('notification.trigger', {
@@ -465,9 +518,7 @@ export class PrescriptionsService {
     });
   }
 
-  async checkDrugInteractions(
-    drugNames: string[],
-  ): Promise<
+  async checkDrugInteractions(drugNames: string[]): Promise<
     Array<{
       drugName: string;
       interactions: Array<{
@@ -484,9 +535,12 @@ export class PrescriptionsService {
 
     for (const drugName of drugNames) {
       // 1. Check domain cache first
-      const cachedInteraction = await this.prescriptionCache.getDrugInteraction(drugName);
+      const cachedInteraction =
+        await this.prescriptionCache.getDrugInteraction(drugName);
       if (cachedInteraction) {
-        labels[drugName] = cachedInteraction.interactions.map((i) => i.description);
+        labels[drugName] = cachedInteraction.interactions.map(
+          (i) => i.description,
+        );
         continue;
       }
 
@@ -522,9 +576,10 @@ export class PrescriptionsService {
               drugName: otherDrug,
               severity: this.detectSeverity(textParagraph),
               description: `Interaction detected between ${currentDrug} and ${otherDrug} based on FDA medical labels.`,
-              recommendation: 'Review dosage or consider alternative medications.',
+              recommendation:
+                'Review dosage or consider alternative medications.',
             });
-            break
+            break;
           }
         }
       }
@@ -543,7 +598,10 @@ export class PrescriptionsService {
    */
   private async fetchInteractionsFromOpenFDA(drugName: string) {
     const apiKey = this.configService.get<string>('OPENFDA_API_KEY');
-    const baseUrl = this.configService.get<string>('OPENFDA_BASE_URL', 'https://api.fda.gov/drug/label.json');
+    const baseUrl = this.configService.get<string>(
+      'OPENFDA_BASE_URL',
+      'https://api.fda.gov/drug/label.json',
+    );
 
     try {
       this.logger.log(`Fetching interactions for ${drugName} from OpenFDA...`);
@@ -569,7 +627,8 @@ export class PrescriptionsService {
         drugName: 'General/Specified in text',
         severity: this.detectSeverity(desc),
         description: desc.substring(0, 500), // Limit length
-        recommendation: 'Consult with a pharmacist or physician for specific details.',
+        recommendation:
+          'Consult with a pharmacist or physician for specific details.',
       }));
     } catch (error) {
       this.logger.error(`OpenFDA error for ${drugName}: ${error}`);
@@ -580,12 +639,22 @@ export class PrescriptionsService {
   /**
    * Basic severity detection based on keywords in the description
    */
-  private detectSeverity(description: string): 'LOW' | 'MODERATE' | 'HIGH' | 'CONTRAINDICATED' {
+  private detectSeverity(
+    description: string,
+  ): 'LOW' | 'MODERATE' | 'HIGH' | 'CONTRAINDICATED' {
     const desc = description.toUpperCase();
-    if (desc.includes('CONTRAINDICATED') || desc.includes('FATAL') || desc.includes('DEATH')) {
+    if (
+      desc.includes('CONTRAINDICATED') ||
+      desc.includes('FATAL') ||
+      desc.includes('DEATH')
+    ) {
       return 'CONTRAINDICATED';
     }
-    if (desc.includes('SEVERE') || desc.includes('SERIOUS') || desc.includes('HIGH RISK')) {
+    if (
+      desc.includes('SEVERE') ||
+      desc.includes('SERIOUS') ||
+      desc.includes('HIGH RISK')
+    ) {
       return 'HIGH';
     }
     if (desc.includes('MODERATE') || desc.includes('MONITOR')) {
@@ -599,7 +668,7 @@ export class PrescriptionsService {
     const connection = await this.prisma.doctorPatientConnection.findFirst({
       where: {
         id: connectionId,
-        doctor: { userId }
+        doctor: { userId },
       },
       include: {
         patient: { select: { id: true, userId: true } },
@@ -621,7 +690,9 @@ export class PrescriptionsService {
       throw new ForbiddenException('Expiry date must be in the future');
     }
     if (expiryDate > maxExpiryDate) {
-      throw new ForbiddenException('Expiry date cannot be more than 1 year in the future');
+      throw new ForbiddenException(
+        'Expiry date cannot be more than 1 year in the future',
+      );
     }
 
     return true;
@@ -651,8 +722,11 @@ export class PrescriptionsService {
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
     const expiring = await this.prisma.prescription.findMany({
-      where: { status: 'ACTIVE', expireAt: { gte: new Date(), lte: threeDaysFromNow } },
-      include: { prescriptionMedications: { take: 1 } }
+      where: {
+        status: 'ACTIVE',
+        expireAt: { gte: new Date(), lte: threeDaysFromNow },
+      },
+      include: { prescriptionMedications: { take: 1 } },
     });
 
     for (const rx of expiring) {
@@ -661,7 +735,8 @@ export class PrescriptionsService {
         type: 'PRESCRIPTION_EXPIRY_REMINDER',
         data: {
           prescriptionId: rx.id,
-          medicationName: rx.prescriptionMedications[0]?.drugName || 'medication',
+          medicationName:
+            rx.prescriptionMedications[0]?.drugName || 'medication',
         },
       });
     }
@@ -675,7 +750,8 @@ export class PrescriptionsService {
       where: { status: 'PENDING', requestedAt: { lte: sevenDaysAgo } },
       data: {
         status: 'REJECTED',
-        rejectionReason: 'Auto-rejected due to no response from the doctor within 7 days.',
+        rejectionReason:
+          'Auto-rejected due to no response from the doctor within 7 days.',
         respondedAt: new Date(),
       },
     });

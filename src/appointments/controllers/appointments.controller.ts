@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBadRequestResponse,
@@ -32,9 +41,15 @@ export class AppointmentsController {
   @Post('appointments')
   @ApiOperation({
     summary: 'Book appointment',
-    description: 'Create a new appointment booking for a patient with a doctor at an available time slot.',
+    description:
+      'Create a new appointment booking for a patient with a doctor at an available time slot.',
   })
-  @ApiQuery({ name: 'patientId', required: true, type: String, description: 'ID of the patient booking the appointment' })
+  @ApiQuery({
+    name: 'patientId',
+    required: true,
+    type: String,
+    description: 'ID of the patient booking the appointment',
+  })
   @ApiBody({
     type: CreateAppointmentDto,
     examples: {
@@ -78,8 +93,13 @@ export class AppointmentsController {
       message: 'Appointment booked successfully',
     },
   })
-  @ApiBadRequestResponse({ description: 'Invalid appointment data or time slot unavailable' })
-  @ApiConflictResponse({ description: 'Time slot already booked or overlaps with another appointment' })
+  @ApiBadRequestResponse({
+    description: 'Invalid appointment data or time slot unavailable',
+  })
+  @ApiConflictResponse({
+    description:
+      'Time slot already booked or overlaps with another appointment',
+  })
   async book(
     @Body() createDto: CreateAppointmentDto,
     @Query('patientId') patientId: string,
@@ -90,7 +110,8 @@ export class AppointmentsController {
   @Patch('appointments/:id/cancel')
   @ApiOperation({
     summary: 'Cancel appointment',
-    description: 'Cancel an existing appointment. Must provide a cancellation reason.',
+    description:
+      'Cancel an existing appointment. Must provide a cancellation reason.',
   })
   @ApiParam({ name: 'id', type: 'string', description: 'Appointment ID' })
   @ApiQuery({
@@ -138,7 +159,9 @@ export class AppointmentsController {
     },
   })
   @ApiNotFoundResponse({ description: 'Appointment not found' })
-  @ApiBadRequestResponse({ description: 'Cannot cancel appointment in this status' })
+  @ApiBadRequestResponse({
+    description: 'Cannot cancel appointment in this status',
+  })
   async cancel(
     @Param('id') id: string,
     @Body() cancelDto: CancelAppointmentDto,
@@ -150,7 +173,8 @@ export class AppointmentsController {
   @Patch('appointments/:id/reschedule')
   @ApiOperation({
     summary: 'Reschedule appointment',
-    description: 'Move an appointment to a different time slot. The new slot must be available.',
+    description:
+      'Move an appointment to a different time slot. The new slot must be available.',
   })
   @ApiParam({ name: 'id', type: 'string', description: 'Appointment ID' })
   @ApiQuery({ name: 'patientId', type: 'string', description: 'Patient ID' })
@@ -178,18 +202,24 @@ export class AppointmentsController {
           endTime: '2025-05-20T14:30:00Z',
           message: 'Appointment rescheduled successfully',
         },
-      },  
+      },
     },
   })
   @ApiNotFoundResponse({ description: 'Appointment not found' })
-  @ApiBadRequestResponse({ description: 'Invalid new time or appointment cannot be rescheduled' })
+  @ApiBadRequestResponse({
+    description: 'Invalid new time or appointment cannot be rescheduled',
+  })
   @ApiConflictResponse({ description: 'New time slot is unavailable' })
   async reschedule(
     @Param('id') id: string,
     @Body() rescheduleDto: RescheduleAppointmentDto,
     @Query('patientId') patientId: string,
   ) {
-    return this.appointmentsService.rescheduleAppointment(id, patientId, rescheduleDto);
+    return this.appointmentsService.rescheduleAppointment(
+      id,
+      patientId,
+      rescheduleDto,
+    );
   }
 
   @Patch('appointments/:id/confirm')
@@ -209,7 +239,9 @@ export class AppointmentsController {
     },
   })
   @ApiNotFoundResponse({ description: 'Appointment not found' })
-  @ApiBadRequestResponse({ description: 'Appointment already confirmed or in invalid status' })
+  @ApiBadRequestResponse({
+    description: 'Appointment already confirmed or in invalid status',
+  })
   async confirm(
     @Param('id') id: string,
     @Query('patientId') patientId: string,
@@ -232,7 +264,10 @@ export class AppointmentsController {
       message: 'Appointment completed successfully',
     },
   })
-  @ApiBadRequestResponse({ description: 'Appointment cannot be completed in its current status or not found' })
+  @ApiBadRequestResponse({
+    description:
+      'Appointment cannot be completed in its current status or not found',
+  })
   async complete(@Param('id') id: string) {
     return this.appointmentsService.completeAppointment(id);
   }
@@ -244,7 +279,8 @@ export class AppointmentsController {
   @Get('appointments/doctor/:doctorId')
   @ApiOperation({
     summary: 'Get doctor appointments',
-    description: 'Retrieve all appointments for a specific doctor, optionally filtered by status.',
+    description:
+      'Retrieve all appointments for a specific doctor, optionally filtered by status.',
   })
   @ApiParam({ name: 'doctorId', type: 'string', description: 'Doctor ID' })
   @ApiQuery({
@@ -279,7 +315,8 @@ export class AppointmentsController {
   @Get('appointments/patient/:patientId')
   @ApiOperation({
     summary: 'Get patient appointments',
-    description: 'Retrieve all appointments for a specific patient, optionally filtered by status.',
+    description:
+      'Retrieve all appointments for a specific patient, optionally filtered by status.',
   })
   @ApiParam({ name: 'patientId', type: 'string', description: 'Patient ID' })
   @ApiQuery({
@@ -314,11 +351,22 @@ export class AppointmentsController {
   @Get('appointments/doctor/:doctorId/slots')
   @ApiOperation({
     summary: 'Get available slots for a doctor',
-    description: 'Retrieve available appointment slots for a doctor within a date range.',
+    description:
+      'Retrieve available appointment slots for a doctor within a date range.',
   })
   @ApiParam({ name: 'doctorId', type: 'string', description: 'Doctor ID' })
-  @ApiQuery({ name: 'startDate', type: String, required: true, description: 'Start date of the search range in ISO format' })
-  @ApiQuery({ name: 'endDate', type: String, required: true, description: 'End date of the search range in ISO format' })
+  @ApiQuery({
+    name: 'startDate',
+    type: String,
+    required: true,
+    description: 'Start date of the search range in ISO format',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: String,
+    required: true,
+    description: 'End date of the search range in ISO format',
+  })
   @ApiResponse({
     status: 200,
     description: 'Available slots retrieved successfully',
@@ -337,7 +385,9 @@ export class AppointmentsController {
       ],
     },
   })
-  @ApiBadRequestResponse({ description: 'Invalid date range or missing query parameters' })
+  @ApiBadRequestResponse({
+    description: 'Invalid date range or missing query parameters',
+  })
   @ApiNotFoundResponse({ description: 'Doctor has not set availability' })
   async getAvailableSlots(
     @Param('doctorId') doctorId: string,
@@ -352,11 +402,31 @@ export class AppointmentsController {
   }
 
   @Get('appointments/slots/available')
-  @ApiOperation({ summary: 'Get available slots for a doctor in a date range (legacy route)' })
-  @ApiQuery({ name: 'doctorId', type: String, required: true, description: 'Doctor ID' })
-  @ApiQuery({ name: 'startDate', type: String, required: true, description: 'Start date of the search range in ISO format' })
-  @ApiQuery({ name: 'endDate', type: String, required: true, description: 'End date of the search range in ISO format' })
-  @ApiResponse({ status: 200, description: 'Available slots retrieved successfully' })
+  @ApiOperation({
+    summary: 'Get available slots for a doctor in a date range (legacy route)',
+  })
+  @ApiQuery({
+    name: 'doctorId',
+    type: String,
+    required: true,
+    description: 'Doctor ID',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    type: String,
+    required: true,
+    description: 'Start date of the search range in ISO format',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: String,
+    required: true,
+    description: 'End date of the search range in ISO format',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Available slots retrieved successfully',
+  })
   async getAvailableSlotsLegacy(
     @Query('doctorId') doctorId: string,
     @Query('startDate') startDate: string,
@@ -370,11 +440,27 @@ export class AppointmentsController {
   }
 
   @Get('appointments/slots/range/:doctorId')
-  @ApiOperation({ summary: 'Get all generated slots for a doctor between two datetimes (legacy route)' })
+  @ApiOperation({
+    summary:
+      'Get all generated slots for a doctor between two datetimes (legacy route)',
+  })
   @ApiParam({ name: 'doctorId', type: String, description: 'Doctor ID' })
-  @ApiQuery({ name: 'start', description: 'ISO datetime string', type: String, required: true })
-  @ApiQuery({ name: 'end', description: 'ISO datetime string', type: String, required: true })
-  @ApiResponse({ status: 200, description: 'Generated slot range returned successfully' })
+  @ApiQuery({
+    name: 'start',
+    description: 'ISO datetime string',
+    type: String,
+    required: true,
+  })
+  @ApiQuery({
+    name: 'end',
+    description: 'ISO datetime string',
+    type: String,
+    required: true,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Generated slot range returned successfully',
+  })
   async getSlotRange(
     @Param('doctorId') doctorId: string,
     @Query('start') start: string,
@@ -390,10 +476,25 @@ export class AppointmentsController {
   }
 
   @Get('appointments/slots/next')
-  @ApiOperation({ summary: 'Get next available slot(s) for a doctor from now (legacy route)' })
-  @ApiQuery({ name: 'doctorId', type: String, required: true, description: 'Doctor ID' })
-  @ApiQuery({ name: 'days', required: false, type: Number, description: 'How many days ahead to search' })
-  @ApiResponse({ status: 200, description: 'Next available slots returned successfully' })
+  @ApiOperation({
+    summary: 'Get next available slot(s) for a doctor from now (legacy route)',
+  })
+  @ApiQuery({
+    name: 'doctorId',
+    type: String,
+    required: true,
+    description: 'Doctor ID',
+  })
+  @ApiQuery({
+    name: 'days',
+    required: false,
+    type: Number,
+    description: 'How many days ahead to search',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Next available slots returned successfully',
+  })
   async getNextSlots(
     @Query('doctorId') doctorId: string,
     @Query('days') days?: string,
@@ -443,10 +544,7 @@ export class AppointmentsController {
     },
   })
   @ApiNotFoundResponse({ description: 'Appointment not found' })
-  async getOne(
-    @Param('id') id: string,
-    @Query('userId') userId?: string,
-  ) {
+  async getOne(@Param('id') id: string, @Query('userId') userId?: string) {
     return this.appointmentsService.getAppointmentById(id, userId);
   }
 }

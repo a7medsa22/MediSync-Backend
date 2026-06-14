@@ -49,7 +49,10 @@ describe('AvailabilityService', () => {
       providers: [
         AvailabilityService,
         { provide: PrismaService, useValue: prismaMock },
-        { provide: AvailabilityValidationHelpers, useValue: validationHelpersMock },
+        {
+          provide: AvailabilityValidationHelpers,
+          useValue: validationHelpersMock,
+        },
       ],
     }).compile();
 
@@ -88,8 +91,12 @@ describe('AvailabilityService', () => {
 
       const result = await service.createAvailability(doctorId, createDto);
 
-      expect(validationHelpersMock.validateNoAvailabilityOverlap).toHaveBeenCalled();
-      expect(validationHelpersMock.validateNoDuplicateAvailability).toHaveBeenCalled();
+      expect(
+        validationHelpersMock.validateNoAvailabilityOverlap,
+      ).toHaveBeenCalled();
+      expect(
+        validationHelpersMock.validateNoDuplicateAvailability,
+      ).toHaveBeenCalled();
       expect(prismaMock.doctorAvailability.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           doctorId,
@@ -145,14 +152,20 @@ describe('AvailabilityService', () => {
           startTime: createDto.availabilities[0].startTime,
           endTime: createDto.availabilities[0].endTime,
           slotDuration: createDto.availabilities[0].slotDuration,
-          maxAppointmentsPerDay: createDto.availabilities[0].maxAppointmentsPerDay,
+          maxAppointmentsPerDay:
+            createDto.availabilities[0].maxAppointmentsPerDay,
           isActive: true,
           createdAt: new Date('2026-01-01T00:00:00.000Z'),
           updatedAt: new Date('2026-01-01T00:00:00.000Z'),
         })
-        .mockRejectedValueOnce(new Error('Overlapping availability already exists'));
+        .mockRejectedValueOnce(
+          new Error('Overlapping availability already exists'),
+        );
 
-      const result = await service.createMultipleAvailabilities(doctorId, createDto);
+      const result = await service.createMultipleAvailabilities(
+        doctorId,
+        createDto,
+      );
 
       expect(result.created).toBe(1);
       expect(result.failed).toBe(1);

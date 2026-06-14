@@ -19,7 +19,7 @@ export class NotificationsService {
   constructor(
     private prisma: PrismaService,
     private readonly notificationsGateway: NotificationsGateway,
-  ) { }
+  ) {}
 
   /**
    * Normalize metadata to ensure UI-ready deep-linking
@@ -76,14 +76,23 @@ export class NotificationsService {
 
       const handler = handlerCandidate as NotificationHandlerLike;
 
-      if (!handler || typeof handler !== 'object' || typeof handler.build !== 'function') {
-        throw new Error(`Notification handler not found for type: ${String(dto.type)}`);
+      if (
+        !handler ||
+        typeof handler !== 'object' ||
+        typeof handler.build !== 'function'
+      ) {
+        throw new Error(
+          `Notification handler not found for type: ${String(dto.type)}`,
+        );
       }
 
-      const content = handler.build(metadata as Record<string, unknown>, dto.type);
+      const content = handler.build(
+        metadata as Record<string, unknown>,
+        dto.type,
+      );
 
       const mergedMetadata: Prisma.JsonObject = {
-        ...(metadata as Prisma.JsonObject),
+        ...metadata,
         ...(content.metadata ?? {}),
       };
 
@@ -108,7 +117,9 @@ export class NotificationsService {
       return notification;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed to create notification for user ${dto.userId}: ${message}`);
+      this.logger.error(
+        `Failed to create notification for user ${dto.userId}: ${message}`,
+      );
       throw error;
     }
   }
@@ -133,7 +144,11 @@ export class NotificationsService {
   }
 
   @OnEvent('notification.trigger')
-  async handleNotificationTrigger(payload: { userId: string; type: NotificationType; data: any }) {
+  async handleNotificationTrigger(payload: {
+    userId: string;
+    type: NotificationType;
+    data: any;
+  }) {
     return this.createNotification({
       userId: payload.userId,
       type: payload.type,
@@ -149,7 +164,7 @@ export class NotificationsService {
   ) {
     const limit = params?.limit ?? 10;
     const cursor = params?.cursor;
-    
+
     const where: Prisma.NotificationWhereInput = { userId };
 
     if (cursor) {

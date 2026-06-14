@@ -39,10 +39,10 @@ export class ChatService {
         user: { id: string; firstName: string; lastName: string };
       };
     };
-    const connection = await this.prisma.doctorPatientConnection.findUnique({
+    const connection = (await this.prisma.doctorPatientConnection.findUnique({
       where: { id: connectionId },
       select: connectionSelect,
-    }) as ConnectionResult | null;
+    })) as ConnectionResult | null;
 
     if (!connection) throw new NotFoundException('Connection not found');
     if (connection.status !== ConnectionStatus.ACTIVE)
@@ -72,7 +72,7 @@ export class ChatService {
           },
         });
         return newChat;
-      }); 
+      });
     }
 
     return {

@@ -2,7 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createTestApp } from '../helpers/test-setup';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { seedDoctor, seedPatient, loginAndGetToken } from '../helpers/auth-helpers';
+import {
+  seedDoctor,
+  seedPatient,
+  loginAndGetToken,
+} from '../helpers/auth-helpers';
 import { TimeUtils } from 'src/common/utils/time.utils';
 
 describe('Prescriptions Flow (Integration)', () => {
@@ -26,8 +30,12 @@ describe('Prescriptions Flow (Integration)', () => {
     doctor = await seedDoctor(prisma);
     patient = await seedPatient(prisma);
 
-    doctorProfile = await prisma.doctor.findUnique({ where: { userId: doctor.id } });
-    patientProfile = await prisma.patient.findUnique({ where: { userId: patient.id } });
+    doctorProfile = await prisma.doctor.findUnique({
+      where: { userId: doctor.id },
+    });
+    patientProfile = await prisma.patient.findUnique({
+      where: { userId: patient.id },
+    });
 
     // Create active connection
     connection = await prisma.doctorPatientConnection.create({
@@ -38,10 +46,18 @@ describe('Prescriptions Flow (Integration)', () => {
       },
     });
 
-    const doctorLogin = await loginAndGetToken(app, doctor.email, doctor.rawPassword);
+    const doctorLogin = await loginAndGetToken(
+      app,
+      doctor.email,
+      doctor.rawPassword,
+    );
     doctorToken = doctorLogin.accessToken;
 
-    const patientLogin = await loginAndGetToken(app, patient.email, patient.rawPassword);
+    const patientLogin = await loginAndGetToken(
+      app,
+      patient.email,
+      patient.rawPassword,
+    );
     patientToken = patientLogin.accessToken;
   });
 
@@ -115,11 +131,11 @@ describe('Prescriptions Flow (Integration)', () => {
     it('should fail to create prescription for inactive connection', async () => {
       const anotherDoctor = await seedDoctor(prisma);
       const anotherDoctorProfile = await prisma.doctor.findUnique({
-        where: { userId: anotherDoctor.id }
+        where: { userId: anotherDoctor.id },
       });
       const anotherPatient = await seedPatient(prisma);
       const anotherPatientProfile = await prisma.patient.findUnique({
-        where: { userId: anotherPatient.id }
+        where: { userId: anotherPatient.id },
       });
 
       const inactiveConnection = await prisma.doctorPatientConnection.create({
@@ -361,7 +377,8 @@ describe('Prescriptions Flow (Integration)', () => {
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(201);
 
-      const renewalId = renewalResponse.body.data?.id || renewalResponse.body.id;
+      const renewalId =
+        renewalResponse.body.data?.id || renewalResponse.body.id;
 
       // Then doctor approves it
       const approveResponse = await request(app.getHttpServer())
@@ -404,7 +421,8 @@ describe('Prescriptions Flow (Integration)', () => {
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(201);
 
-      const renewalId = renewalResponse.body.data?.id || renewalResponse.body.id;
+      const renewalId =
+        renewalResponse.body.data?.id || renewalResponse.body.id;
 
       // Then doctor rejects it
       const rejectResponse = await request(app.getHttpServer())
@@ -461,7 +479,13 @@ describe('Prescriptions Flow (Integration)', () => {
 
     it('should prevent unauthorized doctor from accessing connection prescriptions', async () => {
       const anotherDoctor = await seedDoctor(prisma);
-      const anotherDoctorToken = (await loginAndGetToken(app, anotherDoctor.email, anotherDoctor.rawPassword)).accessToken;
+      const anotherDoctorToken = (
+        await loginAndGetToken(
+          app,
+          anotherDoctor.email,
+          anotherDoctor.rawPassword,
+        )
+      ).accessToken;
 
       await request(app.getHttpServer())
         .get(`/api/v1/prescriptions/connections/${connection.id}`)

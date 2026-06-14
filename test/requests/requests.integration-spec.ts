@@ -2,7 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createTestApp } from '../helpers/test-setup';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { seedDoctor, seedPatient, loginAndGetToken } from '../helpers/auth-helpers';
+import {
+  seedDoctor,
+  seedPatient,
+  loginAndGetToken,
+} from '../helpers/auth-helpers';
 import { RequestStatus, ConnectionStatus } from '@prisma/client';
 
 describe('Requests & Connections Flow (Integration)', () => {
@@ -21,10 +25,18 @@ describe('Requests & Connections Flow (Integration)', () => {
     doctor = await seedDoctor(prisma);
     patient = await seedPatient(prisma);
 
-    const doctorLogin = await loginAndGetToken(app, doctor.email, doctor.rawPassword);
+    const doctorLogin = await loginAndGetToken(
+      app,
+      doctor.email,
+      doctor.rawPassword,
+    );
     doctorToken = doctorLogin.accessToken;
 
-    const patientLogin = await loginAndGetToken(app, patient.email, patient.rawPassword);
+    const patientLogin = await loginAndGetToken(
+      app,
+      patient.email,
+      patient.rawPassword,
+    );
     patientToken = patientLogin.accessToken;
   });
 
@@ -91,12 +103,18 @@ describe('Requests & Connections Flow (Integration)', () => {
         })
         .expect(201);
 
-      expect(response.body.data.connection.status).toBe(ConnectionStatus.ACTIVE);
+      expect(response.body.data.connection.status).toBe(
+        ConnectionStatus.ACTIVE,
+      );
 
       const connection = await prisma.doctorPatientConnection.findFirst({
         where: {
-          doctorId: (await prisma.doctor.findUnique({ where: { userId: doctor.id } }))?.id,
-          patientId: (await prisma.patient.findUnique({ where: { userId: patient.id } }))?.id,
+          doctorId: (
+            await prisma.doctor.findUnique({ where: { userId: doctor.id } })
+          )?.id,
+          patientId: (
+            await prisma.patient.findUnique({ where: { userId: patient.id } })
+          )?.id,
         },
       });
       expect(connection).toBeDefined();
@@ -105,7 +123,13 @@ describe('Requests & Connections Flow (Integration)', () => {
 
     it('should allow doctor to reject a request', async () => {
       const anotherPatient = await seedPatient(prisma);
-      const anotherPatientToken = (await loginAndGetToken(app, anotherPatient.email, anotherPatient.rawPassword)).accessToken;
+      const anotherPatientToken = (
+        await loginAndGetToken(
+          app,
+          anotherPatient.email,
+          anotherPatient.rawPassword,
+        )
+      ).accessToken;
 
       const doctorProfile = await prisma.doctor.findUnique({
         where: { userId: doctor.id },
@@ -137,7 +161,13 @@ describe('Requests & Connections Flow (Integration)', () => {
 
     it('should prevent patient from accepting their own request', async () => {
       const anotherPatient = await seedPatient(prisma);
-      const anotherPatientToken = (await loginAndGetToken(app, anotherPatient.email, anotherPatient.rawPassword)).accessToken;
+      const anotherPatientToken = (
+        await loginAndGetToken(
+          app,
+          anotherPatient.email,
+          anotherPatient.rawPassword,
+        )
+      ).accessToken;
 
       const doctorProfile = await prisma.doctor.findUnique({
         where: { userId: doctor.id },
@@ -163,13 +193,15 @@ describe('Requests & Connections Flow (Integration)', () => {
     });
     it('should prevent a different doctor from accepting someone else request', async () => {
       const otherDoctor = await seedDoctor(prisma);
-      const otherDoctorToken = (await loginAndGetToken(app, otherDoctor.email, otherDoctor.rawPassword)).accessToken;
+      const otherDoctorToken = (
+        await loginAndGetToken(app, otherDoctor.email, otherDoctor.rawPassword)
+      ).accessToken;
 
       await request(app.getHttpServer())
         .post(`/api/v1/requests/${requestId}/accept`)
         .set('Authorization', `Bearer ${otherDoctorToken}`)
         .send({ schedule: 'Every Tuesday 5 PM' })
-        .expect(403); 
+        .expect(403);
     });
 
     it('should prevent doctor from modifying an already accepted request', async () => {
@@ -177,7 +209,7 @@ describe('Requests & Connections Flow (Integration)', () => {
         .post(`/api/v1/requests/${requestId}/reject`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({ reason: 'Change my mind' })
-        .expect(400); 
+        .expect(400);
     });
 
     it('should fail to create request with invalid data format', async () => {
@@ -185,7 +217,7 @@ describe('Requests & Connections Flow (Integration)', () => {
         .post('/api/v1/requests')
         .set('Authorization', `Bearer ${patientToken}`)
         .send({
-          doctorId: 'not-a-valid-uuid', 
+          doctorId: 'not-a-valid-uuid',
         })
         .expect(400);
     });

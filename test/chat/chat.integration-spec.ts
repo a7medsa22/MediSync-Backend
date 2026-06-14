@@ -2,7 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { createTestApp } from '../helpers/test-setup';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { seedDoctor, seedPatient, loginAndGetToken } from '../helpers/auth-helpers';
+import {
+  seedDoctor,
+  seedPatient,
+  loginAndGetToken,
+} from '../helpers/auth-helpers';
 
 describe('Chat Flow (Integration)', () => {
   let app: INestApplication;
@@ -23,8 +27,12 @@ describe('Chat Flow (Integration)', () => {
     doctor = await seedDoctor(prisma);
     patient = await seedPatient(prisma);
 
-    doctorProfile = await prisma.doctor.findUnique({ where: { userId: doctor.id } });
-    patientProfile = await prisma.patient.findUnique({ where: { userId: patient.id } });
+    doctorProfile = await prisma.doctor.findUnique({
+      where: { userId: doctor.id },
+    });
+    patientProfile = await prisma.patient.findUnique({
+      where: { userId: patient.id },
+    });
 
     // Create a connection first
     connection = await prisma.doctorPatientConnection.create({
@@ -35,10 +43,18 @@ describe('Chat Flow (Integration)', () => {
       },
     });
 
-    const doctorLogin = await loginAndGetToken(app, doctor.email, doctor.rawPassword);
+    const doctorLogin = await loginAndGetToken(
+      app,
+      doctor.email,
+      doctor.rawPassword,
+    );
     doctorToken = doctorLogin.accessToken;
 
-    const patientLogin = await loginAndGetToken(app, patient.email, patient.rawPassword);
+    const patientLogin = await loginAndGetToken(
+      app,
+      patient.email,
+      patient.rawPassword,
+    );
     patientToken = patientLogin.accessToken;
   });
 
@@ -110,7 +126,13 @@ describe('Chat Flow (Integration)', () => {
 
     it('should prevent user from accessing a chat they are not part of', async () => {
       const anotherPatient = await seedPatient(prisma);
-      const anotherPatientToken = (await loginAndGetToken(app, anotherPatient.email, anotherPatient.rawPassword)).accessToken;
+      const anotherPatientToken = (
+        await loginAndGetToken(
+          app,
+          anotherPatient.email,
+          anotherPatient.rawPassword,
+        )
+      ).accessToken;
 
       await request(app.getHttpServer())
         .get(`/api/v1/chat/${chatId}`)

@@ -15,7 +15,15 @@ async function bootstrap() {
 
   // Global Method Not Allowed Handler
   app.use((req, res, next) => {
-    const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
+    const allowedMethods = [
+      'GET',
+      'POST',
+      'PUT',
+      'DELETE',
+      'PATCH',
+      'OPTIONS',
+      'HEAD',
+    ];
     if (!allowedMethods.includes(req.method)) {
       return res.status(HttpStatus.METHOD_NOT_ALLOWED).json({
         success: false,

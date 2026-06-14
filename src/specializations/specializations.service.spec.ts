@@ -60,7 +60,9 @@ describe('SpecializationsService', () => {
 
     it('should throw ConflictException if specialization already exists', async () => {
       const dto = { name: 'Cardiology', nameAr: 'أمراض القلب' };
-      mockPrismaService.specialization.findUnique.mockResolvedValue({ id: '1' });
+      mockPrismaService.specialization.findUnique.mockResolvedValue({
+        id: '1',
+      });
 
       await expect(service.create(dto)).rejects.toThrow(ConflictException);
     });

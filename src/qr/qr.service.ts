@@ -176,8 +176,6 @@ export class QrService {
       },
     });
 
-   
-
     const connectionNotifs = [
       {
         userId: doctor.user.id,

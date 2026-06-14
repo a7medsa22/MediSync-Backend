@@ -15,13 +15,20 @@ export class TimeUtils {
   /**
    * Normalize date range and validate it
    */
-  static normalizeDateRange(startDate: Date, endDate: Date): { start: Date; end: Date } | null {
+  static normalizeDateRange(
+    startDate: Date,
+    endDate: Date,
+  ): { start: Date; end: Date } | null {
     if (!(startDate instanceof Date) || !(endDate instanceof Date)) return null;
 
     const start = this.normalizeDate(startDate);
     const end = this.normalizeDate(endDate);
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start.getTime() > end.getTime()) {
+    if (
+      isNaN(start.getTime()) ||
+      isNaN(end.getTime()) ||
+      start.getTime() > end.getTime()
+    ) {
       return null;
     }
 
@@ -63,7 +70,7 @@ export class TimeUtils {
     start1: number,
     end1: number,
     start2: number,
-    end2: number
+    end2: number,
   ): boolean {
     return start1 < end2 && end1 > start2;
   }
@@ -130,7 +137,6 @@ export class TimeUtils {
     result.setDate(result.getDate() + days);
     return result;
   }
-  
 
   /**
    * Check if date is in the past (before today)

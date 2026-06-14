@@ -18,7 +18,10 @@ export class GetMessagesDto {
   @Max(100)
   limit?: number = 20;
 
-  @ApiProperty({ required: false, description: 'Message ID for cursor-based pagination' })
+  @ApiProperty({
+    required: false,
+    description: 'Message ID for cursor-based pagination',
+  })
   @IsOptional()
   @IsString()
   before?: string; // messageId - للـ cursor-based pagination

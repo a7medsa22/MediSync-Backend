@@ -16,7 +16,8 @@ export class AppointmentRefundPolicy {
     appointmentStartMs: number;
     cancellationTimestampMs: number;
   }): AppointmentRefundResult {
-    const { isDoctorCancelling, appointmentStartMs, cancellationTimestampMs } = params;
+    const { isDoctorCancelling, appointmentStartMs, cancellationTimestampMs } =
+      params;
     const timeUntilAppointment = appointmentStartMs - cancellationTimestampMs;
 
     if (isDoctorCancelling) {

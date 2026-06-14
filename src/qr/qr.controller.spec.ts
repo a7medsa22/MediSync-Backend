@@ -47,7 +47,9 @@ describe('QrController', () => {
   describe('generateQr', () => {
     it('should call service.generateConnectionQrForDoctor', async () => {
       const dto = { expiryMinutes: 5, type: QrTokenType.CONNECTION };
-      mockQrService.generateConnectionQrForDoctor.mockResolvedValue({ id: '1' });
+      mockQrService.generateConnectionQrForDoctor.mockResolvedValue({
+        id: '1',
+      });
 
       const result = await controller.generateQr(mockUser as any, dto);
 

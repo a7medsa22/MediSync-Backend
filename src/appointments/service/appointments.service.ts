@@ -1,11 +1,26 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SlotGeneratorService } from './slot-generator.service';
-import { AvailableSlotsResponse, CancelAppointmentDto, CreateAppointmentDto, GetAvailableSlots, RescheduleAppointmentDto } from '../dto/appointment.dto';
+import {
+  AvailableSlotsResponse,
+  CancelAppointmentDto,
+  CreateAppointmentDto,
+  GetAvailableSlots,
+  RescheduleAppointmentDto,
+} from '../dto/appointment.dto';
 import { AppointmentStatusPolicy } from '../policies/appointment-status.policy';
 import { AppointmentRefundPolicy } from '../policies/appointment-refund.policy';
-import { Appointment, AppointmentStatus, NotificationType } from '@prisma/client';
+import {
+  Appointment,
+  AppointmentStatus,
+  NotificationType,
+} from '@prisma/client';
 
 @Injectable()
 export class AppointmentsService {
@@ -13,17 +28,23 @@ export class AppointmentsService {
     private readonly prisma: PrismaService,
     private readonly slotService: SlotGeneratorService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
-  async getAvailableSlots(params: GetAvailableSlots): Promise<AvailableSlotsResponse> {
+  ) {}
+  async getAvailableSlots(
+    params: GetAvailableSlots,
+  ): Promise<AvailableSlotsResponse> {
     const { doctorId, startDate, endDate } = params;
 
     const availabilities = await this.prisma.doctorAvailability.findMany({
-      where: { doctorId, }
-    })
+      where: { doctorId },
+    });
     if (!availabilities.length)
       throw new NotFoundException('Doctor has not set availability');
 
-    const slots = await this.slotService.generateSlots({ doctorId, startDate, endDate });
+    const slots = await this.slotService.generateSlots({
+      doctorId,
+      startDate,
+      endDate,
+    });
 
     const bookedAppointments = await this.prisma.appointment.findMany({
       where: {
@@ -32,7 +53,7 @@ export class AppointmentsService {
         endTime: { lte: endDate },
         status: { in: AppointmentStatusPolicy.activeStatuses() },
       },
-      select: { startTime: true, endTime: true }
+      select: { startTime: true, endTime: true },
     });
 
     const availableSlots = slots.filter(
@@ -47,13 +68,10 @@ export class AppointmentsService {
       doctorId,
       availableCount: availableSlots.length,
       slots: availableSlots.slice(0, 100),
-    }
+    };
   }
 
-  async getDoctorAppointments(
-    doctorId: string,
-    status?: AppointmentStatus,
-  ) {
+  async getDoctorAppointments(doctorId: string, status?: AppointmentStatus) {
     return this.prisma.appointment.findMany({
       where: {
         doctorId,
@@ -63,10 +81,7 @@ export class AppointmentsService {
     });
   }
 
-  async getPatientAppointments(
-    patientId: string,
-    status?: AppointmentStatus,
-  ) {
+  async getPatientAppointments(patientId: string, status?: AppointmentStatus) {
     return this.prisma.appointment.findMany({
       where: {
         patientId,
@@ -78,7 +93,7 @@ export class AppointmentsService {
 
   async getAppointmentById(appointmentId: string, userId?: string) {
     const appointment = await this.prisma.appointment.findUnique({
-      where: { id: appointmentId }
+      where: { id: appointmentId },
     });
 
     if (!appointment) {
@@ -96,14 +111,14 @@ export class AppointmentsService {
     const dateText = appointment.startTime.toDateString();
     const timeText = appointment.startTime.toLocaleTimeString();
 
-    [appointment.patientId, appointment.doctorId].forEach(userId =>
+    [appointment.patientId, appointment.doctorId].forEach((userId) =>
       this.eventEmitter.emit('notification.trigger', {
         userId,
         type: NotificationType.APPOINTMENT_REMINDER,
         data: {
           appointmentId: appointment.id,
         },
-      })
+      }),
     );
 
     return true;
@@ -113,7 +128,12 @@ export class AppointmentsService {
     const appointment = await this.getAppointmentById(appointmentId);
     const dateText = appointment.startTime.toDateString();
     const timeText = appointment.startTime.toLocaleTimeString();
-    const reminderLabel = timeframe === '24h' ? '24 hours' : timeframe === '1h' ? '1 hour' : timeframe;
+    const reminderLabel =
+      timeframe === '24h'
+        ? '24 hours'
+        : timeframe === '1h'
+          ? '1 hour'
+          : timeframe;
 
     const notificationData = {
       title: `Appointment Reminder (${reminderLabel})`,
@@ -122,12 +142,12 @@ export class AppointmentsService {
       metadata: { timeframe },
     };
 
-    [appointment.patientId, appointment.doctorId].forEach(userId =>
+    [appointment.patientId, appointment.doctorId].forEach((userId) =>
       this.eventEmitter.emit('notification.trigger', {
         userId,
         type: NotificationType.APPOINTMENT_REMINDER,
         data: notificationData,
-      })
+      }),
     );
 
     return { reminderSent: true, timeframe };
@@ -195,19 +215,22 @@ export class AppointmentsService {
         where: {
           id: appointmentId,
           patientId,
-          status: { in: AppointmentStatusPolicy.confirmableStatuses() }
+          status: { in: AppointmentStatusPolicy.confirmableStatuses() },
         },
         data: {
-          status: AppointmentStatus.CONFIRMED
+          status: AppointmentStatus.CONFIRMED,
         },
         select: {
-          id: true, status: true, doctorId: true, startTime: true,
+          id: true,
+          status: true,
+          doctorId: true,
+          startTime: true,
           patient: {
             select: {
               user: { select: { firstName: true, lastName: true } },
             },
           },
-        }
+        },
       });
 
       // Notify doctor
@@ -220,13 +243,14 @@ export class AppointmentsService {
         },
       });
 
-      return updateAppoinment
-
+      return updateAppoinment;
     } catch (error: any) {
       if (error.code === 'P2025') {
-        throw new BadRequestException('Action not allowed or appointment not found');
+        throw new BadRequestException(
+          'Action not allowed or appointment not found',
+        );
       }
-      throw error
+      throw error;
     }
   }
 
@@ -241,7 +265,9 @@ export class AppointmentsService {
     }
 
     if (!AppointmentStatusPolicy.canBeCompleted(appointment.status)) {
-      throw new BadRequestException('Appointment cannot be completed in its current status');
+      throw new BadRequestException(
+        'Appointment cannot be completed in its current status',
+      );
     }
 
     const updated = await this.prisma.appointment.update({
@@ -273,7 +299,9 @@ export class AppointmentsService {
       const updated = await this.prisma.appointment.update({
         where: {
           id: appointmentId,
-          status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] },
+          status: {
+            in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
+          },
           OR: [{ doctorId: userId }, { patientId: userId }],
         },
         data: {
@@ -300,7 +328,8 @@ export class AppointmentsService {
       );
 
       this.eventEmitter.emit('notification.trigger', {
-        userId: updated.doctorId === userId ? updated.patientId : updated.doctorId,
+        userId:
+          updated.doctorId === userId ? updated.patientId : updated.doctorId,
         type: NotificationType.APPOINTMENT_CANCELLED,
         data: {
           date: updated.startTime.toDateString(),
@@ -309,7 +338,11 @@ export class AppointmentsService {
         },
       });
 
-      return this.buildCancellationResponse(updated, refund, 'Appointment cancelled successfully');
+      return this.buildCancellationResponse(
+        updated,
+        refund,
+        'Appointment cancelled successfully',
+      );
     } catch (error: any) {
       if (error.code === 'P2025') {
         const existing = await this.prisma.appointment.findUnique({
@@ -332,17 +365,27 @@ export class AppointmentsService {
             existing.cancelledAt?.getTime() ?? now.getTime(),
           );
 
-          return this.buildCancellationResponse(existing, refund, 'Appointment was already cancelled');
+          return this.buildCancellationResponse(
+            existing,
+            refund,
+            'Appointment was already cancelled',
+          );
         }
 
-        throw new BadRequestException('Appointment not found or cannot be cancelled');
+        throw new BadRequestException(
+          'Appointment not found or cannot be cancelled',
+        );
       }
 
       throw error;
     }
   }
 
-  async rescheduleAppointment(appointmentId: string, patientId: string, rescheduleDto: RescheduleAppointmentDto) {
+  async rescheduleAppointment(
+    appointmentId: string,
+    patientId: string,
+    rescheduleDto: RescheduleAppointmentDto,
+  ) {
     const { newStartTime, reason } = rescheduleDto;
     const newStart = new Date(newStartTime);
 
@@ -363,13 +406,23 @@ export class AppointmentsService {
     });
 
     if (!appointment) {
-      throw new BadRequestException('Appointment not found or cannot be rescheduled');
+      throw new BadRequestException(
+        'Appointment not found or cannot be rescheduled',
+      );
     }
 
     const availability = await this.getDoctorAvailability(appointment.doctorId);
-    const newEnd = this.calculateAppointmentEnd(newStart, availability.slotDuration);
+    const newEnd = this.calculateAppointmentEnd(
+      newStart,
+      availability.slotDuration,
+    );
 
-    await this.validateConflictingAppointments(appointment.doctorId, newStart, newEnd, appointmentId);
+    await this.validateConflictingAppointments(
+      appointment.doctorId,
+      newStart,
+      newEnd,
+      appointmentId,
+    );
     await this.validateSlotAvailability(appointment.doctorId, newStart, newEnd);
 
     const updated = await this.prisma.appointment.update({
@@ -398,26 +451,17 @@ export class AppointmentsService {
     });
 
     if (!availability) {
-      throw new NotFoundException(
-        'Doctor has not set availability',
-      );
+      throw new NotFoundException('Doctor has not set availability');
     }
 
     return availability;
   }
-  private calculateAppointmentEnd(
-    start: Date,
-    durationMinutes: number,
-  ) {
-    return new Date(
-      start.getTime() + durationMinutes * 60 * 1000,
-    );
+  private calculateAppointmentEnd(start: Date, durationMinutes: number) {
+    return new Date(start.getTime() + durationMinutes * 60 * 1000);
   }
   private validateFutureDate(date: Date) {
     if (date <= new Date()) {
-      throw new BadRequestException(
-        'Date must be in the future',
-      );
+      throw new BadRequestException('Date must be in the future');
     }
 
     return true;
@@ -458,24 +502,20 @@ export class AppointmentsService {
   }
 
   private async validateDoctorPatientConnection(
-
     doctorId: string,
     patientId: string,
   ) {
-    const connection =
-      await this.prisma.doctorPatientConnection.findUnique({
-        where: {
-          doctorId_patientId: {
-            doctorId,
-            patientId,
-          },
+    const connection = await this.prisma.doctorPatientConnection.findUnique({
+      where: {
+        doctorId_patientId: {
+          doctorId,
+          patientId,
         },
-      });
+      },
+    });
 
     if (!connection) {
-      throw new NotFoundException(
-        'Connection does not exist',
-      );
+      throw new NotFoundException('Connection does not exist');
     }
 
     return connection;
@@ -486,27 +526,22 @@ export class AppointmentsService {
     end: Date,
     appointmentId?: string,
   ) {
-    const conflicting =
-      await this.prisma.appointment.findFirst({
-        where: {
-          doctorId,
-          id: appointmentId
-            ? { not: appointmentId }
-            : undefined,
+    const conflicting = await this.prisma.appointment.findFirst({
+      where: {
+        doctorId,
+        id: appointmentId ? { not: appointmentId } : undefined,
 
-          startTime: { lt: end },
-          endTime: { gt: start },
+        startTime: { lt: end },
+        endTime: { gt: start },
 
-          status: {
-            in: AppointmentStatusPolicy.activeStatuses(),
-          },
+        status: {
+          in: AppointmentStatusPolicy.activeStatuses(),
         },
-      });
+      },
+    });
 
     if (conflicting) {
-      throw new BadRequestException(
-        'Time slot is already booked',
-      );
+      throw new BadRequestException('Time slot is already booked');
     }
 
     return true;
@@ -516,36 +551,29 @@ export class AppointmentsService {
     start: Date,
     end: Date,
   ) {
-    const slots =
-      await this.slotService.generateSlots({
-        doctorId,
-        startDate: start,
-        endDate: end,
-      });
+    const slots = await this.slotService.generateSlots({
+      doctorId,
+      startDate: start,
+      endDate: end,
+    });
 
     const isValidSlot = slots.some(
-      (slot) =>
-        slot.start.getTime() === start.getTime(),
+      (slot) => slot.start.getTime() === start.getTime(),
     );
 
     if (!isValidSlot) {
-      throw new BadRequestException(
-        'Invalid slot',
-      );
+      throw new BadRequestException('Invalid slot');
     }
 
     return true;
   }
 
-
-  private mapAppointmentResponse(
-    appointment: {
-      id: string;
-      status: AppointmentStatus;
-      startTime: Date;
-      endTime: Date;
-    },
-  ) {
+  private mapAppointmentResponse(appointment: {
+    id: string;
+    status: AppointmentStatus;
+    startTime: Date;
+    endTime: Date;
+  }) {
     return {
       id: appointment.id,
       status: appointment.status,
@@ -587,5 +615,4 @@ export class AppointmentsService {
       cancellationTimestampMs,
     });
   }
-
 }

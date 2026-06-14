@@ -45,6 +45,8 @@ describe('AppointmentsController', () => {
     appointmentsServiceMock.completeAppointment.mockResolvedValue(result);
 
     await expect(controller.complete('apt_123')).resolves.toEqual(result);
-    expect(appointmentsServiceMock.completeAppointment).toHaveBeenCalledWith('apt_123');
+    expect(appointmentsServiceMock.completeAppointment).toHaveBeenCalledWith(
+      'apt_123',
+    );
   });
 });

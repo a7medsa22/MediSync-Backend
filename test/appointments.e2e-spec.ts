@@ -16,7 +16,15 @@ describe('Appointments Flow (e2e)', () => {
   let appointmentId: string;
 
   const uniqueSuffix = Math.random().toString(36).slice(2, 8);
-  const weekdayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+  const weekdayNames = [
+    'SUNDAY',
+    'MONDAY',
+    'TUESDAY',
+    'WEDNESDAY',
+    'THURSDAY',
+    'FRIDAY',
+    'SATURDAY',
+  ] as const;
 
   // Keep local date math so it matches slot-generator's expectations.
   function getFutureAppointmentDate() {
@@ -109,10 +117,14 @@ describe('Appointments Flow (e2e)', () => {
     try {
       await prisma.appointment.deleteMany({ where: { connectionId } });
       await prisma.doctorAvailability.deleteMany({ where: { doctorId } });
-      await prisma.doctorPatientConnection.deleteMany({ where: { id: connectionId } });
+      await prisma.doctorPatientConnection.deleteMany({
+        where: { id: connectionId },
+      });
       await prisma.doctor.deleteMany({ where: { id: doctorId } });
       await prisma.patient.deleteMany({ where: { id: patientId } });
-      await prisma.user.deleteMany({ where: { id: { in: [doctorUserId, patientUserId] } } });
+      await prisma.user.deleteMany({
+        where: { id: { in: [doctorUserId, patientUserId] } },
+      });
     } finally {
       await app.close();
     }
@@ -147,13 +159,21 @@ describe('Appointments Flow (e2e)', () => {
       .get(`/api/v1/appointments/doctor/${doctorId}`)
       .expect(200);
     expect(Array.isArray(doctorAppointments.body?.data)).toBe(true);
-    expect(doctorAppointments.body.data.some((item: any) => item.id === appointmentId)).toBe(true);
+    expect(
+      doctorAppointments.body.data.some(
+        (item: any) => item.id === appointmentId,
+      ),
+    ).toBe(true);
 
     const patientAppointments = await request(app!.getHttpServer())
       .get(`/api/v1/appointments/patient/${patientId}`)
       .expect(200);
     expect(Array.isArray(patientAppointments.body?.data)).toBe(true);
-    expect(patientAppointments.body.data.some((item: any) => item.id === appointmentId)).toBe(true);
+    expect(
+      patientAppointments.body.data.some(
+        (item: any) => item.id === appointmentId,
+      ),
+    ).toBe(true);
 
     const slotRangeStart = new Date(appointmentDate);
     slotRangeStart.setHours(0, 0, 0, 0);
@@ -171,7 +191,9 @@ describe('Appointments Flow (e2e)', () => {
     expect(availableSlots.body?.data?.doctorId).toBe(doctorId);
     expect(availableSlots.body?.data?.availableCount).toBeGreaterThan(0);
     expect(
-      availableSlots.body.data.slots.some((slot: any) => slot.start === appointmentDate.toISOString()),
+      availableSlots.body.data.slots.some(
+        (slot: any) => slot.start === appointmentDate.toISOString(),
+      ),
     ).toBe(false);
 
     const legacySlots = await request(app!.getHttpServer())
@@ -210,7 +232,9 @@ describe('Appointments Flow (e2e)', () => {
       .query({ patientId })
       .expect(200);
 
-    const newAppointmentDate = new Date(appointmentDate.getTime() + 60 * 60 * 1000);
+    const newAppointmentDate = new Date(
+      appointmentDate.getTime() + 60 * 60 * 1000,
+    );
 
     const rescheduleResponse = await request(app!.getHttpServer())
       .patch(`/api/v1/appointments/${appointmentId}/reschedule`)
@@ -221,7 +245,9 @@ describe('Appointments Flow (e2e)', () => {
       })
       .expect(200);
 
-    expect(rescheduleResponse.body?.data?.startTime).toBe(newAppointmentDate.toISOString());
+    expect(rescheduleResponse.body?.data?.startTime).toBe(
+      newAppointmentDate.toISOString(),
+    );
     expect(rescheduleResponse.body?.data?.status).toBe('CONFIRMED');
 
     const appointmentById = await request(app!.getHttpServer())
@@ -230,7 +256,9 @@ describe('Appointments Flow (e2e)', () => {
       .expect(200);
 
     expect(appointmentById.body?.data?.id).toBe(appointmentId);
-    expect(appointmentById.body?.data?.startTime).toBe(newAppointmentDate.toISOString());
+    expect(appointmentById.body?.data?.startTime).toBe(
+      newAppointmentDate.toISOString(),
+    );
 
     const cancellationResponse = await request(app!.getHttpServer())
       .patch(`/api/v1/appointments/${appointmentId}/cancel`)
