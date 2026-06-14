@@ -18,15 +18,16 @@ import { RedisLockModule } from './common/redis-lock/redis-lock.module';
 import { RedisPubSubModule } from './common/redis-pubsub/redis-pubsub.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ClinicsModule } from './clinics/clinics.module';
 
 @Module({
   imports: [
-    //Event 
+    //Event
     EventEmitterModule.forRoot({
-        wildcard: true,
-        delimiter: '.',
-        maxListeners: 10,
-    }), 
+      wildcard: true,
+      delimiter: '.',
+      maxListeners: 10,
+    }),
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
@@ -73,6 +74,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     NotificationsModule,
     ChatModule,
     AppointmentsModule,
+    ClinicsModule,
   ],
   providers: [
     {

@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
@@ -16,7 +21,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       maxRetriesPerRequest: 3,
       retryStrategy: (times) => {
         const delay = Math.min(times * 50, 2000);
-        this.logger.warn(`Retrying Redis connection in ${delay}ms (attempt ${times})`);
+        this.logger.warn(
+          `Retrying Redis connection in ${delay}ms (attempt ${times})`,
+        );
         return delay;
       },
     });
@@ -76,6 +83,17 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async delPattern(pattern: string): Promise<void> {
+    try {
+      const keys = await this.scan(pattern);
+      if (keys.length > 0) {
+        await this.client.del(...keys);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to delete pattern: ${pattern}`, error);
+    }
+  }
+
   async exists(key: string): Promise<boolean> {
     const result = await this.client.exists(key);
     return result === 1;
@@ -116,7 +134,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const keys: string[] = [];
     let cursor = '0';
     do {
-      const [newCursor, foundKeys] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      const [newCursor, foundKeys] = await this.client.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100,
+      );
       cursor = newCursor;
       keys.push(...foundKeys);
     } while (cursor !== '0');
