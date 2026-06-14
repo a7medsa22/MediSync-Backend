@@ -5,6 +5,8 @@ import { NotificationCacheService } from './notification-cache.service';
 import { SpecializationCacheService } from './specialization-cache.service';
 import { AnalyticsCacheService } from './analytics-cache.service';
 import { PrescriptionCacheService } from './prescription-cache.service';
+import { DoctorCacheService } from './doctor-cache.service';
+import { ClinicCacheService } from './clinic-cache.service';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { RedisModule } from '../redis/redis.module';
 
@@ -18,6 +20,8 @@ import { RedisModule } from '../redis/redis.module';
     SpecializationCacheService,
     AnalyticsCacheService,
     PrescriptionCacheService,
+    DoctorCacheService,
+    ClinicCacheService,
   ],
   exports: [
     UserCacheService,
@@ -26,6 +30,9 @@ import { RedisModule } from '../redis/redis.module';
     SpecializationCacheService,
     AnalyticsCacheService,
     PrescriptionCacheService,
+    DoctorCacheService,
+    ClinicCacheService,
   ],
 })
 export class CacheModule {}
+

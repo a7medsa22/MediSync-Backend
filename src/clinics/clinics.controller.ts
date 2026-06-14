@@ -21,13 +21,14 @@ import {
 import { ClinicsService } from './clinics.service';
 
 @ApiTags('Clinics Engine')
-@Controller('api/v2/clinics')
+@Controller('clinics')
 export class ClinicsController {
   constructor(private readonly clinicsService: ClinicsService) {}
 
   @Post()
   @Roles(UserRole.DOCTOR)
   @ApiOperation({ summary: 'Register a new Clinic (Doctor Entity)' })
+
   async createClinic(
     @CurrentUser('sub') userId: string,
     @Body() dto: CreateClinicDto,

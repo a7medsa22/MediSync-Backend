@@ -43,7 +43,10 @@ describe('ClinicsController', () => {
   });
 
   it('should call createClinic with correct params', async () => {
-    mockService.createClinic.mockResolvedValue({ id: 'clinic-1', name: 'Test Clinic' });
+    mockService.createClinic.mockResolvedValue({
+      id: 'clinic-1',
+      name: 'Test Clinic',
+    });
 
     const result = await controller.createClinic('doc-1', {
       name: 'Test',

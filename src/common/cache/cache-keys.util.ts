@@ -45,6 +45,20 @@ export const CacheKeys = {
     systemStats: () => `analytics:system:stats`,
   },
 
+  // Doctor domain
+  doctor: {
+    profile: (id: string) => `doctor:profile:${id}`,
+    reviews: (id: string) => `doctor:reviews:${id}`,
+  },
+
+  // Clinic domain
+  clinic: {
+    details: (id: string) => `clinic:details:${id}`,
+    search: (query: any) => `clinics:search:${JSON.stringify(query)}`,
+    searchPattern: () => 'clinics:search:*',
+  },
+
   // Global helpers
   build: (...parts: (string | number)[]) => parts.join(':'),
 };
+

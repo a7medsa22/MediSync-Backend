@@ -10,4 +10,5 @@ export async function cleanDatabase(prisma: PrismaClient) {
       `TRUNCATE TABLE "public"."${tablename}" RESTART IDENTITY CASCADE;`,
     );
   }
+
 }

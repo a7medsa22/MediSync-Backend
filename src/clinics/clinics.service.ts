@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { RedisService } from 'src/common/redis/redis.service';
+import { ClinicCacheService } from 'src/common/cache/clinic-cache.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   CreateClinicDto,
@@ -19,13 +19,13 @@ import { VerificationStatus, NotificationType } from '@prisma/client';
 export class ClinicsService {
   constructor(
     private prisma: PrismaService,
-    private redis: RedisService,
+    private clinicCache: ClinicCacheService,
     private eventEmitter: EventEmitter2,
   ) {}
 
   async createClinic(userId: string, dto: CreateClinicDto) {
     const doctor = await this.prisma.doctor.findUnique({
-      where: { userId},
+      where: { userId },
     });
     if (!doctor) throw new NotFoundException('Doctor not found');
     const doctorId = doctor.id;
@@ -47,7 +47,7 @@ export class ClinicsService {
     });
 
     // Invalidate search cache
-    await this.redis.delPattern('clinics:search:*');
+    await this.clinicCache.invalidateClinicSearchCache();
 
     // Notify admins for verification
     const admins = await this.prisma.user.findMany({
@@ -67,8 +67,7 @@ export class ClinicsService {
   }
 
   async getClinic(id: string) {
-    const cacheKey = `clinic:details:${id}`;
-    const cached = await this.redis.get(cacheKey);
+    const cached = await this.clinicCache.getClinicDetails(id);
     if (cached) return cached;
 
     const clinic = await this.prisma.clinic.findUnique({
@@ -77,7 +76,7 @@ export class ClinicsService {
     });
     if (!clinic) throw new NotFoundException('Clinic not found');
 
-    await this.redis.set(cacheKey, clinic, 3600);
+    await this.clinicCache.cacheClinicDetails(id, clinic);
     return clinic;
   }
 
@@ -87,10 +86,10 @@ export class ClinicsService {
     isAdmin: boolean,
     dto: UpdateClinicDto,
   ) {
-    const clinic = await this.prisma.clinic.findUnique({ where: { id} });
+    const clinic = await this.prisma.clinic.findUnique({ where: { id } });
     if (!clinic) throw new NotFoundException('Clinic not found');
 
-    const doctor  = await this.prisma.doctor.findUnique({
+    const doctor = await this.prisma.doctor.findUnique({
       where: { userId },
     });
     const doctorId = doctor?.id;
@@ -146,8 +145,7 @@ export class ClinicsService {
   }
 
   async searchClinics(query: SearchClinicsDto) {
-    const cacheKey = `clinics:search:${JSON.stringify(query)}`;
-    const cached = await this.redis.get(cacheKey);
+    const cached = await this.clinicCache.getClinicSearchResults(query);
     if (cached) return cached;
 
     const whereClause: Record<string, unknown> = {
@@ -166,7 +164,7 @@ export class ClinicsService {
     });
 
     const result = { total: clinics.length, clinics };
-    await this.redis.set(cacheKey, result, 3600);
+    await this.clinicCache.cacheClinicSearchResults(query, result);
     return result;
   }
 
@@ -186,7 +184,7 @@ export class ClinicsService {
   }
 
   private async invalidateClinicCache(id: string) {
-    await this.redis.del(`clinic:details:${id}`);
-    await this.redis.delPattern('clinics:search:*');
+    await this.clinicCache.invalidateClinicDetails(id);
+    await this.clinicCache.invalidateClinicSearchCache();
   }
 }

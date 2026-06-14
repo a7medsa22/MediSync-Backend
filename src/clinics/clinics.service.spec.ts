@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClinicsService } from './clinics.service';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { RedisService } from 'src/common/redis/redis.service';
+import { ClinicCacheService } from 'src/common/cache/clinic-cache.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   BadRequestException,
@@ -24,11 +24,13 @@ describe('ClinicsService', () => {
     doctor: { findUnique: jest.Mock };
     clinicInsurance: { create: jest.Mock; delete: jest.Mock };
   };
-  let redis: {
-    get: jest.Mock;
-    set: jest.Mock;
-    del: jest.Mock;
-    delPattern: jest.Mock;
+  let clinicCache: {
+    getClinicDetails: jest.Mock;
+    cacheClinicDetails: jest.Mock;
+    invalidateClinicDetails: jest.Mock;
+    getClinicSearchResults: jest.Mock;
+    cacheClinicSearchResults: jest.Mock;
+    invalidateClinicSearchCache: jest.Mock;
   };
   let eventEmitter: { emit: jest.Mock; on: jest.Mock; off: jest.Mock };
 
@@ -53,11 +55,13 @@ describe('ClinicsService', () => {
       },
     };
 
-    redis = {
-      get: jest.fn(),
-      set: jest.fn(),
-      del: jest.fn(),
-      delPattern: jest.fn(),
+    clinicCache = {
+      getClinicDetails: jest.fn(),
+      cacheClinicDetails: jest.fn(),
+      invalidateClinicDetails: jest.fn(),
+      getClinicSearchResults: jest.fn(),
+      cacheClinicSearchResults: jest.fn(),
+      invalidateClinicSearchCache: jest.fn(),
     };
 
     eventEmitter = {
@@ -70,7 +74,7 @@ describe('ClinicsService', () => {
       providers: [
         ClinicsService,
         { provide: PrismaService, useValue: prisma },
-        { provide: RedisService, useValue: redis },
+        { provide: ClinicCacheService, useValue: clinicCache },
         {
           provide: EventEmitter2,
           useValue: eventEmitter,
@@ -154,16 +158,16 @@ describe('ClinicsService', () => {
   describe('getClinic', () => {
     it('should return cached clinic if available', async () => {
       const cachedClinic = { id: 'clinic-1', name: 'Cached Clinic' };
-      redis.get.mockResolvedValue(cachedClinic);
+      clinicCache.getClinicDetails.mockResolvedValue(cachedClinic);
 
       const result = await service.getClinic('clinic-1');
 
       expect(result).toEqual(cachedClinic);
-      expect(redis.get).toHaveBeenCalledWith('clinic:details:clinic-1');
+      expect(clinicCache.getClinicDetails).toHaveBeenCalledWith('clinic-1');
     });
 
     it('should fetch from DB and cache if not cached', async () => {
-      redis.get.mockResolvedValue(null);
+      clinicCache.getClinicDetails.mockResolvedValue(null);
       const clinic = {
         id: 'clinic-1',
         name: 'DB Clinic',
@@ -176,11 +180,11 @@ describe('ClinicsService', () => {
 
       expect(result).toEqual(clinic);
       expect(prisma.clinic.findUnique).toHaveBeenCalled();
-      expect(redis.set).toHaveBeenCalled();
+      expect(clinicCache.cacheClinicDetails).toHaveBeenCalledWith('clinic-1', clinic);
     });
 
     it('should throw NotFoundException if clinic not found', async () => {
-      redis.get.mockResolvedValue(null);
+      clinicCache.getClinicDetails.mockResolvedValue(null);
       prisma.clinic.findUnique.mockResolvedValue(null);
 
       await expect(service.getClinic('nonexistent')).rejects.toThrow(
@@ -337,7 +341,7 @@ describe('ClinicsService', () => {
   describe('searchClinics', () => {
     it('should return cached results if available', async () => {
       const cached = { total: 1, clinics: [] };
-      redis.get.mockResolvedValue(cached);
+      clinicCache.getClinicSearchResults.mockResolvedValue(cached);
 
       const result = await service.searchClinics({});
 
@@ -345,7 +349,7 @@ describe('ClinicsService', () => {
     });
 
     it('should search clinics with filters', async () => {
-      redis.get.mockResolvedValue(null);
+      clinicCache.getClinicSearchResults.mockResolvedValue(null);
       prisma.clinic.findMany.mockResolvedValue([]);
 
       await service.searchClinics({ city: 'Cairo', governorate: 'Giza' });
