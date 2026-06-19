@@ -24,6 +24,15 @@ export class ClinicHandler implements NotificationHandler {
             rejectionReason: data.rejectionReason,
           },
         };
+      case T.CLINIC_REGISTRATION_SUBMITTED:
+        return {
+          title: 'Clinic Registration Submitted',
+          message: `A new clinic "${data.clinicName}" has submitted registration.`,
+          metadata: {
+            clinicId: data.clinicId,
+            clinicName: data.clinicName,
+          },
+        };
       default:
         return {
           title: 'Clinic Notification',

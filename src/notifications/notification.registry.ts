@@ -5,6 +5,8 @@ import { ConnectionHandler } from './handlers/connection.handler';
 import { PrescriptionHandler } from './handlers/prescription.handler';
 import { SystemHandler } from './handlers/system.handler';
 import { ClinicHandler } from './handlers/clinic.handler';
+import { MedicalRecordHandler } from './handlers/medical-record.handler';
+import { DoctorReviewHandler } from './handlers/doctor-review.handler';
 
 export const notificationRegistry = {
   [NotificationsType.CONNECTION_REQUEST]: new ConnectionHandler(),
@@ -63,6 +65,18 @@ export const notificationRegistry = {
 
   [NotificationsType.CLINIC_REJECTED]: new ClinicHandler(),
   CLINIC_REJECTED: new ClinicHandler(),
+
+  [NotificationsType.CLINIC_REGISTRATION_SUBMITTED]: new ClinicHandler(),
+  CLINIC_REGISTRATION_SUBMITTED: new ClinicHandler(),
+
+  [NotificationsType.MEDICAL_RECORD_SHARED]: new MedicalRecordHandler(),
+  MEDICAL_RECORD_SHARED: new MedicalRecordHandler(),
+
+  [NotificationsType.MEDICAL_RECORD_UPLOADED]: new MedicalRecordHandler(),
+  MEDICAL_RECORD_UPLOADED: new MedicalRecordHandler(),
+
+  [NotificationsType.NEW_DOCTOR_REVIEW]: new DoctorReviewHandler(),
+  NEW_DOCTOR_REVIEW: new DoctorReviewHandler(),
 
   // Fallback when registry doesn't have a handler for the incoming type
   SYSTEM_DEFAULT: new SystemHandler(),

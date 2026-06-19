@@ -47,6 +47,7 @@ const mockRedisService = {
   get: jest.fn().mockResolvedValue(null),
   set: jest.fn().mockResolvedValue(undefined),
   del: jest.fn().mockResolvedValue(undefined),
+  delPattern: jest.fn().mockResolvedValue(undefined),
   exists: jest.fn().mockResolvedValue(true),
   scan: jest.fn().mockResolvedValue([]),
   flushall: jest.fn().mockResolvedValue(undefined),
@@ -65,19 +66,6 @@ export async function createTestApp(): Promise<{
       sendEmailVerificationOtp: jest.fn().mockResolvedValue(true),
       sendPasswordResetOtp: jest.fn().mockResolvedValue(true),
       sendLoginOtpEmail: jest.fn().mockResolvedValue(true),
-    })
-    .overrideProvider(
-      require('src/notifications/notifications.service').NotificationsService,
-    )
-    .useValue({
-      createNotification: jest.fn().mockResolvedValue(true),
-      getUserNotifications: jest
-        .fn()
-        .mockResolvedValue({ notifications: [], nextCursor: null }),
-      getUnreadCount: jest.fn().mockResolvedValue(0),
-      markAsRead: jest.fn().mockResolvedValue(true),
-      markAllAsRead: jest.fn().mockResolvedValue(true),
-      deleteNotification: jest.fn().mockResolvedValue(true),
     })
     .overrideProvider(HttpService)
     .useValue({

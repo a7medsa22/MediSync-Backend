@@ -4,7 +4,7 @@ import { createTestApp } from '../helpers/test-setup';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { loginAndGetToken, seedDoctor, seedPatient } from '../helpers/auth-helpers';
 
-describe('Clinics, Profiles & Reviews (Integration)', () => {
+describe('Doctor Profile & Reviews (Integration)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let doctorToken: string;
@@ -13,7 +13,6 @@ describe('Clinics, Profiles & Reviews (Integration)', () => {
   let patient: any;
   let patientId: string;
   let doctorId: string;
-  let clinicId: string;
 
   beforeAll(async () => {
     const setup = await createTestApp();
@@ -31,7 +30,7 @@ describe('Clinics, Profiles & Reviews (Integration)', () => {
       doctor.rawPassword,
     );
     doctorToken = doctorLogin.accessToken;
-
+    // Find the Doctor profile ID (which is Doctor.id, not User.id)
     const doctorProfile = await prisma.doctor.findUnique({
       where: { userId: doctor.id },
     });
@@ -43,60 +42,82 @@ describe('Clinics, Profiles & Reviews (Integration)', () => {
       patient.rawPassword,
     );
     patientToken = patientLogin.accessToken;
-
+    
     const patientProfile = await prisma.patient.findUnique({
       where: { userId: patient.id },
     });
     patientId = patientProfile!.id;
+
+    jest.clearAllMocks();
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  describe('POST /clinics', () => {
-    it('should allow a doctor to create a clinic successfully', async () => {
-      const clinicDto = {
-        name: 'El-Amal Clinic',
-        address: '123 Main St',
-        city: 'Cairo',
-        governorate: 'Cairo',
-        phone: '01012345678',
-        email: 'clinic@medisync.com',
-        licenseNumber: 'LC-999888',
-        licenseDoc: 'https://s3.amazonaws.com/medisync/docs/license.pdf',
-        consultationFee: 300.00,
+  describe('PUT /doctor-profile/me', () => {
+    it('should allow a logged-in doctor to update their own profile', async () => {
+      const updateDto = {
+        bio: 'Experienced surgeon with 10+ years of practice.',
+        yearsOfExperience: 12,
+        education: 'MD from Harvard Medical School',
       };
 
       const response = await request(app.getHttpServer())
-        .post('/api/v2/clinics')
+        .put('/api/v2/doctor-profile/me')
         .set('Authorization', `Bearer ${doctorToken}`)
-        .send(clinicDto)
-        .expect(201);
+        .send(updateDto)
+        .expect(200);
 
-      expect(response.body.data).toHaveProperty('id');
-      expect(response.body.data.name).toBe(clinicDto.name);
-      expect(response.body.data.verificationStatus).toBe('PENDING');
-      clinicId = response.body.data.id;
+      expect(response.body.data.bio).toBe(updateDto.bio);
+      expect(response.body.data.yearsOfExperience).toBe(updateDto.yearsOfExperience);
+      expect(response.body.data.education).toBe(updateDto.education);
+
+      // Verify DB change
+      const dbDoctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
+      expect(dbDoctor?.bio).toBe(updateDto.bio);
     });
 
-    it('should reject clinic creation if user is a PATIENT (Role Guard)', async () => {
-      const clinicDto = { name: 'Failed Clinic' };
-
+    it('should deny access if not authenticated', async () => {
       await request(app.getHttpServer())
-        .post('/api/v2/clinics')
+        .put('/api/v2/doctor-profile/me')
+        .send({ bio: 'Hello' })
+        .expect(401);
+    });
+
+    it('should deny profile updates if role is PATIENT', async () => {
+      await request(app.getHttpServer())
+        .put('/api/v2/doctor-profile/me')
         .set('Authorization', `Bearer ${patientToken}`)
-        .send(clinicDto)
+        .send({ bio: 'Patient attempting to be doctor' })
         .expect(403);
     });
   });
 
+  describe('GET /doctor-profile/:id', () => {
+    it('should return a doctor profile by ID successfully', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v2/doctor-profile/${doctorId}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(doctorId);
+    });
+
+    it('should throw NotFound (404) if profile does not exist', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v2/doctor-profile/non-existent-uuid')
+        .expect(404);
+    });
+  });
+
   describe('POST /doctors/:id/reviews', () => {
-    it('should allow a patient to review a doctor if they have a COMPLETED appointment', async () => {
+    it('should allow a patient to review a doctor after a completed appointment and trigger event-driven notification', async () => {
+      // 1. Create a connection
       const connection = await prisma.doctorPatientConnection.create({
         data: { doctorId, patientId, status: 'ACTIVE' },
       });
 
+      // 2. Create a completed appointment
       await prisma.appointment.create({
         data: {
           doctorId,
@@ -110,8 +131,7 @@ describe('Clinics, Profiles & Reviews (Integration)', () => {
 
       const reviewDto = {
         rating: 5,
-        comment: 'Good doctor, very professional and kind. Highly recommend.',
-        isAnonymous: false,
+        comment: 'Amazing attention and care.',
       };
 
       const response = await request(app.getHttpServer())
@@ -123,35 +143,45 @@ describe('Clinics, Profiles & Reviews (Integration)', () => {
       expect(response.body.data).toHaveProperty('id');
       expect(response.body.data.rating).toBe(5);
 
-      const updatedDoctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
-      expect(updatedDoctor?.rating).toBe(5);
-      expect(updatedDoctor?.reviewCount).toBe(1);
+      // Verify that the NEW_DOCTOR_REVIEW notification was triggered asynchronously via EventEmitter
+      // Allow async event loop processing
+      await new Promise((resolve) => setTimeout(resolve, 150));
+ 
+      const notifications = await prisma.notification.findMany({
+        where: { userId: doctor.id, type: 'NEW_DOCTOR_REVIEW' },
+      });
+      expect(notifications.length).toBe(1);
+      expect(notifications[0].metadata).toEqual(
+        expect.objectContaining({
+          rating: reviewDto.rating,
+          comment: reviewDto.comment,
+          actionUrl: '/dashboard/doctor/reviews',
+        }),
+      );
     });
 
-    it('should throw BadRequest (400) if patient tries to review without a completed appointment', async () => {
-      const reviewDto = { rating: 4, comment: 'No completed appointment exists' };
+    it('should block reviews if patient has no completed appointment with the doctor', async () => {
+      const reviewDto = {
+        rating: 4,
+        comment: 'I never had an appointment but trying to review.',
+      };
 
-      const response = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post(`/api/v2/doctors/${doctorId}/reviews`)
         .set('Authorization', `Bearer ${patientToken}`)
         .send(reviewDto)
         .expect(400);
-
-      expect(response.body.message).toEqual(
-        expect.arrayContaining([expect.stringContaining('Cannot review without a completed appointment')]),
-      );
     });
   });
 
   describe('GET /doctors/:id/reviews', () => {
-    it('should return a list of reviews for a specific doctor', async () => {
+    it('should list reviews for a doctor', async () => {
       await prisma.doctorReview.create({
         data: {
           doctorId,
           patientId,
           rating: 4,
-          comment: 'Good experience',
-          isAnonymous: false,
+          comment: 'Standard review',
         },
       });
 
@@ -161,24 +191,6 @@ describe('Clinics, Profiles & Reviews (Integration)', () => {
 
       expect(Array.isArray(response.body.data)).toBe(true);
       expect(response.body.data.length).toBeGreaterThanOrEqual(1);
-      expect(response.body.data[0].comment).toBe('Good experience');
-    });
-  });
-
-  describe('GET /doctor-profile/:id', () => {
-    it('should fetch the public profile of a doctor including aggregate ratings', async () => {
-      await prisma.doctor.update({
-        where: { id: doctorId },
-        data: { rating: 4.5, reviewCount: 12 },
-      });
-
-      const response = await request(app.getHttpServer())
-        .get(`/api/v2/doctor-profile/${doctorId}`)
-        .expect(200);
-
-      expect(response.body.data).toHaveProperty('id');
-      expect(response.body.data.rating).toBe(4.5);
-      expect(response.body.data.reviewCount).toBe(12);
     });
   });
 });

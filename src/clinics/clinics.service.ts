@@ -62,6 +62,15 @@ export class ClinicsService {
           message: 'New Clinic verification requested',
         },
       });
+
+      this.eventEmitter.emit('notification.trigger', {
+        userId: admin.id,
+        type: 'CLINIC_REGISTRATION_SUBMITTED',
+        data: {
+          clinicId: clinic.id,
+          clinicName: clinic.name,
+        },
+      });
     }
     return clinic;
   }
@@ -134,11 +143,13 @@ export class ClinicsService {
       userId: clinic.doctorId,
       type:
         dto.status === VerificationStatus.VERIFIED
-          ? NotificationType.CLINIC_VERIFIED
-          : NotificationType.CLINIC_REJECTED,
+          ? 'CLINIC_VERIFIED'
+          : 'CLINIC_REJECTED',
       data: {
         clinicId: clinic.id,
-        rejectionReason: dto.rejectionReason,
+        clinicName: clinic.name,
+        actionUrl: `/dashboard/doctor/clinics`,
+        ...(dto.status === VerificationStatus.REJECTED ? { rejectionReason: dto.rejectionReason } : {}),
       },
     });
     return updated;

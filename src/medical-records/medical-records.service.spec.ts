@@ -54,6 +54,9 @@ const mockPrismaClient = {
     deleteMany: jest.fn(),
     findUnique: jest.fn(),
   },
+  patient: {
+    findUnique: jest.fn(),
+  },
 };
 
 const mockPrismaService = {
@@ -79,6 +82,9 @@ const mockPrismaService = {
     create: jest.fn(),
     delete: jest.fn(),
     deleteMany: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  patient: {
     findUnique: jest.fn(),
   },
 };
@@ -166,6 +172,7 @@ describe('MedicalRecordsService', () => {
       mockStorageService.upload.mockResolvedValue(uploadResult);
       mockPrismaClient.medicalRecord.create.mockResolvedValue(createdRecord);
       mockPrismaClient.fileAuditLog.create.mockResolvedValue({});
+      mockPrismaService.patient.findUnique.mockResolvedValue({ userId: 'patient-user-123' });
 
       // Act
       const result = await service.createRecord(dto, mockFile, userId);
@@ -184,6 +191,13 @@ describe('MedicalRecordsService', () => {
           patientId: dto.patientId,
           uploadedBy: userId,
         },
+      );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'notification.trigger',
+        expect.objectContaining({
+          userId: 'patient-user-123',
+          type: 'MEDICAL_RECORD_UPLOADED',
+        }),
       );
     });
 
@@ -610,7 +624,13 @@ describe('MedicalRecordsService', () => {
       };
       const req = {} as any;
 
-      mockPrismaService.medicalRecord.findUnique.mockResolvedValue(mockRecord);
+      const recordWithUser = {
+        ...mockRecord,
+        title: 'Blood Test Results',
+        patient: { user: { firstName: 'Test', lastName: 'Patient' } },
+      };
+
+      mockPrismaService.medicalRecord.findUnique.mockResolvedValue(recordWithUser);
       mockPrismaService.recordShare.findFirst.mockResolvedValue(null);
       mockPrismaService.recordShare.create.mockResolvedValue(mockShare);
 
@@ -642,6 +662,18 @@ describe('MedicalRecordsService', () => {
           sharedWith: dto.sharedWithUserId,
           sharedBy: userId,
         },
+      );
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'notification.trigger',
+        expect.objectContaining({
+          userId: 'shared-user-123',
+          type: 'MEDICAL_RECORD_SHARED',
+          data: expect.objectContaining({
+            recordId: 'record-123',
+            patientName: 'Test Patient',
+            recordTitle: 'Blood Test Results',
+          }),
+        }),
       );
     });
 

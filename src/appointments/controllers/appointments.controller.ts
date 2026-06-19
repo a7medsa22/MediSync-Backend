@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Version,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -28,10 +29,14 @@ import {
   RescheduleAppointmentDto,
 } from '../dto/appointment.dto';
 import { AppointmentStatus } from '@prisma/client';
+import { ApiAuth } from 'src/common/decorators/api-auth.decorator';
 
 @ApiTags('Appointments')
-@ApiBearerAuth('JWT-auth')
-@Controller()
+@ApiAuth()
+@Controller({
+  path: 'appointments',
+  version: '2',
+})
 export class AppointmentsController {
   constructor(
     private readonly appointmentsService: AppointmentsService,

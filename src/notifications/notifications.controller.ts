@@ -11,8 +11,11 @@ import { NotificationsService } from './notifications.service';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { ApiAuth } from 'src/common/decorators/api-auth.decorator';
 
-@Controller('notifications')
 @ApiAuth()
+@Controller({
+  path:'notifications',
+  version: '2'
+})
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

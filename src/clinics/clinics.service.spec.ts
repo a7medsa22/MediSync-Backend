@@ -117,7 +117,7 @@ describe('ClinicsService', () => {
         doctorId,
         verificationStatus: VerificationStatus.PENDING,
       });
-      prisma.user.findMany.mockResolvedValue([]);
+      prisma.user.findMany.mockResolvedValue([{ id: 'admin-1', role: 'ADMIN' }]);
 
       const result = await service.createClinic(userId, dto);
 
@@ -129,6 +129,17 @@ describe('ClinicsService', () => {
           verificationStatus: VerificationStatus.PENDING,
         },
       });
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'notification.trigger',
+        expect.objectContaining({
+          userId: 'admin-1',
+          type: 'CLINIC_REGISTRATION_SUBMITTED',
+          data: expect.objectContaining({
+            clinicId: 'clinic-1',
+            clinicName: 'Clinic A',
+          }),
+        }),
+      );
     });
 
     it('should throw NotFoundException if doctor not found', async () => {
@@ -277,11 +288,13 @@ describe('ClinicsService', () => {
     it('should verify clinic and emit notification', async () => {
       prisma.clinic.findUnique.mockResolvedValue({
         id: 'clinic-1',
+        name: 'Clinic A',
         doctorId: 'doc-1',
         verificationStatus: VerificationStatus.PENDING,
       });
       prisma.clinic.update.mockResolvedValue({
         id: 'clinic-1',
+        name: 'Clinic A',
         verificationStatus: VerificationStatus.VERIFIED,
       });
 
@@ -300,7 +313,12 @@ describe('ClinicsService', () => {
         'notification.trigger',
         expect.objectContaining({
           userId: 'doc-1',
-          type: NotificationType.CLINIC_VERIFIED,
+          type: 'CLINIC_VERIFIED',
+          data: expect.objectContaining({
+            clinicId: 'clinic-1',
+            clinicName: 'Clinic A',
+            actionUrl: `/dashboard/doctor/clinics`,
+          }),
         }),
       );
     });
@@ -308,11 +326,13 @@ describe('ClinicsService', () => {
     it('should reject clinic and set rejection reason', async () => {
       prisma.clinic.findUnique.mockResolvedValue({
         id: 'clinic-1',
+        name: 'Clinic A',
         doctorId: 'doc-1',
         verificationStatus: VerificationStatus.PENDING,
       });
       prisma.clinic.update.mockResolvedValue({
         id: 'clinic-1',
+        name: 'Clinic A',
         verificationStatus: VerificationStatus.REJECTED,
         rejectionReason: 'Invalid docs',
       });
@@ -332,7 +352,14 @@ describe('ClinicsService', () => {
       expect(eventEmitter.emit).toHaveBeenCalledWith(
         'notification.trigger',
         expect.objectContaining({
-          type: NotificationType.CLINIC_REJECTED,
+          userId: 'doc-1',
+          type: 'CLINIC_REJECTED',
+          data: expect.objectContaining({
+            clinicId: 'clinic-1',
+            clinicName: 'Clinic A',
+            actionUrl: `/dashboard/doctor/clinics`,
+            rejectionReason: 'Invalid docs',
+          }),
         }),
       );
     });

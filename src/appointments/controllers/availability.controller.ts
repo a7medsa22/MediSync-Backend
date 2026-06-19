@@ -31,7 +31,10 @@ import {
 
 @ApiTags('Doctor Availability Management')
 @ApiBearerAuth('JWT-auth')
-@Controller('availability')
+@Controller({
+  path:'availability',
+  version: '2',
+})
 export class AvailabilityController {
   constructor(private readonly availabilityService: AvailabilityService) {}
 

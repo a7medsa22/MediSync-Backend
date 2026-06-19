@@ -20,6 +20,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ClinicsModule } from './clinics/clinics.module';
 import { MedicalRecordsModule } from './medical-records/medical-records.module';
+import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { MedicalRecordsModule } from './medical-records/medical-records.module';
     AppointmentsModule,
     ClinicsModule,
     MedicalRecordsModule,
+    StorageModule,
   ],
   providers: [
     {

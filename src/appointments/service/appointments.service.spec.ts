@@ -169,7 +169,7 @@ describe('AppointmentsService', () => {
         roomNumber: '101',
         status: AppointmentStatus.PENDING,
         patient: { user: { firstName: 'P', lastName: 'T' } },
-        doctor: { user: { firstName: 'D', lastName: 'O' } },
+        doctor: { userId: 'doc_1', user: { firstName: 'D', lastName: 'O' } },
       });
 
       const result = await service.bookAppointment('patient_1', {
@@ -213,6 +213,7 @@ describe('AppointmentsService', () => {
         status: AppointmentStatus.CONFIRMED,
         doctorId: 'doc_1',
         startTime,
+        doctor: { userId: 'doc_1' },
         // service.confirmAppointment reads updateAppoinment.patient.user.*
         patient: { user: { firstName: 'P', lastName: 'T' } },
       });
@@ -325,6 +326,8 @@ describe('AppointmentsService', () => {
         cancelledBy: userId,
         doctorId: 'doc_1',
         patientId: 'patient_1',
+        doctor: { userId: 'doc_1' },
+        patient: { userId: 'patient_1' },
       };
 
       prismaMock.appointment.update.mockResolvedValue(updated as any);

@@ -7,7 +7,10 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Roles } from 'src/auth/decorators/roles.decorator';
@@ -21,10 +24,14 @@ import {
 import { ClinicsService } from './clinics.service';
 
 @ApiTags('Clinics Engine')
-@Controller('clinics')
+@Controller({
+  path: 'clinics',
+  version: '2',
+})
 export class ClinicsController {
   constructor(private readonly clinicsService: ClinicsService) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post()
   @Roles(UserRole.DOCTOR)
   @ApiOperation({ summary: 'Register a new Clinic (Doctor Entity)' })
@@ -47,6 +54,7 @@ export class ClinicsController {
     return this.clinicsService.getClinic(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id')
   @Roles(UserRole.DOCTOR)
   async updateClinic(
@@ -63,6 +71,7 @@ export class ClinicsController {
     );
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post(':id/verify')
   @Roles(UserRole.ADMIN)
   async verifyClinic(

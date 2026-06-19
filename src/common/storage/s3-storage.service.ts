@@ -1,5 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import {
   IStorageService,
   StorageFile,
@@ -153,8 +155,6 @@ export class S3StorageService implements IStorageService {
     key: string,
     file: StorageFile,
   ): Promise<UploadResult> {
-    const fs = await import('fs/promises');
-    const path = await import('path');
     const localDir = path.join(
       process.cwd(),
       'local-storage',
@@ -173,14 +173,10 @@ export class S3StorageService implements IStorageService {
   }
 
   private async localDownload(key: string): Promise<Buffer> {
-    const fs = await import('fs/promises');
-    const path = await import('path');
     return fs.readFile(path.join(process.cwd(), 'local-storage', key));
   }
 
   private async localDelete(key: string): Promise<void> {
-    const fs = await import('fs/promises');
-    const path = await import('path');
     await fs
       .unlink(path.join(process.cwd(), 'local-storage', key))
       .catch(() => {});

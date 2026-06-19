@@ -16,7 +16,10 @@ import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { UpdateDoctorProfileDto } from './dto/clinics.dto';
 
 @ApiTags('Doctor Profile')
-@Controller('doctor-profile')
+@Controller({
+  path:'doctor-profile',
+  version: '2'
+})
 export class DoctorProfileController {
   constructor(private readonly doctorProfileService: DoctorProfileService) {}
 

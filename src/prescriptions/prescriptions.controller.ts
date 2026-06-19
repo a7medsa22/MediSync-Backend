@@ -42,14 +42,18 @@ import express from 'express';
 
 @ApiTags('Prescriptions')
 @ApiAuth()
-@Controller('prescriptions')
+@Controller({
+  path: 'prescriptions',
+  version: '2'
+})
+
 export class PrescriptionsController {
   constructor(
     private readonly prescriptionsService: PrescriptionsService,
     private readonly prescriptionRenewalService: PrescriptionRenewalService,
     private readonly prescriptionTemplateService: PrescriptionTemplateService,
     private readonly prescriptionPdfService: PrescriptionPdfService,
-  ) {}
+  ) { }
 
   // ===============================================
   // CREATE PRESCRIPTION (Doctor only)

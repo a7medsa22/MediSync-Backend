@@ -63,6 +63,14 @@ export class MedicalRecordsService {
   ) {
     MedicalRecordsService.validateFile(file);
 
+    const patient = await this.prisma.patient.findUnique({
+      where: { id: dto.patientId },
+      select: { userId: true },
+    });
+    if (!patient) {
+      throw new NotFoundException('Patient not found');
+    }
+
     // 1. Encrypt the file buffer before persisting
     const { encryptedData, iv, authTag, keyId } =
       await this.encryptionService.encryptFile(file.buffer);
@@ -126,6 +134,18 @@ export class MedicalRecordsService {
           patientId: dto.patientId,
           uploadedBy: userId,
         });
+
+        if (userId !== patient.userId) {
+          this.eventEmitter.emit('notification.trigger', {
+            userId: patient.userId,
+            type: 'MEDICAL_RECORD_UPLOADED',
+            data: {
+              recordId: record.id,
+              title: record.title,
+              actionUrl: `/dashboard/patient/records`,
+            },
+          });
+        }
 
         return record;
       });
@@ -343,7 +363,22 @@ export class MedicalRecordsService {
   ) {
     const record = await this.prisma.medicalRecord.findUnique({
       where: { id },
-      select: { id: true, patientId: true, uploadedBy: true },
+      select: {
+        id: true,
+        patientId: true,
+        uploadedBy: true,
+        title: true,
+        patient: {
+          select: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!record) {
@@ -400,6 +435,21 @@ export class MedicalRecordsService {
       recordId: id,
       sharedWith: dto.sharedWithUserId,
       sharedBy: userId,
+    });
+
+    const patientName = record.patient?.user
+      ? `${record.patient.user.firstName} ${record.patient.user.lastName}`
+      : 'Fetched Patient Name';
+
+    this.eventEmitter.emit('notification.trigger', {
+      userId: share.sharedWithUserId,
+      type: 'MEDICAL_RECORD_SHARED',
+      data: {
+        recordId: record.id,
+        patientName,
+        recordTitle: record.title,
+        actionUrl: `/dashboard/doctor/records/${record.id}`,
+      },
     });
 
     return share;

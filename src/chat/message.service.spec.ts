@@ -121,7 +121,7 @@ describe('MessageService', () => {
 
     it('should throw ForbiddenException if user has no access', async () => {
       (chatService.getChatHeader as jest.Mock).mockResolvedValue({});
-      (chatService.hasAccess as jest.Mock).mockReturnValue(false);
+      (chatService.canAccessChat as jest.Mock).mockReturnValue(false);
       await expect(service.getMessages('chatId', 'userId', {})).rejects.toThrow(
         ForbiddenException,
       );
@@ -132,7 +132,7 @@ describe('MessageService', () => {
       const messages = [{ id: '1', createdAt: new Date() }];
 
       (chatService.getChatHeader as jest.Mock).mockResolvedValue(chatHeader);
-      (chatService.hasAccess as jest.Mock).mockReturnValue(true);
+      (chatService.canAccessChat as jest.Mock).mockReturnValue(true);
       (prisma.message.findMany as jest.Mock).mockResolvedValue(messages);
       (prisma.message.count as jest.Mock).mockResolvedValue(0);
 

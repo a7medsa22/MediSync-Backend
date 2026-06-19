@@ -37,13 +37,16 @@ import {
   ShareRecordDto,
   QueryRecordsDto,
 } from './dto/medical-records.dto';
+import { ApiAuth } from 'src/common/decorators/api-auth.decorator';
 
 @ApiTags('Medical Records')
-@ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
-@Controller('medical-records')
+@ApiAuth()
+@Controller({
+  path: 'medical-records',
+  version: '2'
+})
 export class MedicalRecordsController {
-  constructor(private readonly medicalRecordsService: MedicalRecordsService) {}
+  constructor(private readonly medicalRecordsService: MedicalRecordsService) { }
 
   /* ───── Upload / Create ─────────────────────────────────── */
 

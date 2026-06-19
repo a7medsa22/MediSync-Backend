@@ -7,12 +7,14 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { DoctorCacheService } from 'src/common/cache/doctor-cache.service';
 import { UpdateDoctorProfileDto, CreateReviewDto } from './dto/clinics.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class DoctorProfileService {
   constructor(
     private prisma: PrismaService,
     private doctorCache: DoctorCacheService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async getProfile(doctorId: string) {
@@ -71,6 +73,22 @@ export class DoctorProfileService {
     await this.updateDoctorRating(doctorId);
     await this.doctorCache.invalidateDoctorProfile(doctorId);
     await this.doctorCache.invalidateDoctorReviews(doctorId);
+
+    const doctor = await this.prisma.doctor.findUnique({
+      where: { id: doctorId },
+      select: { userId: true },
+    });
+    const doctorUserId = doctor?.userId || doctorId;
+
+    this.eventEmitter.emit('notification.trigger', {
+      userId: doctorUserId,
+      type: 'NEW_DOCTOR_REVIEW',
+      data: {
+        rating: dto.rating,
+        comment: dto.comment,
+        actionUrl: `/dashboard/doctor/reviews`,
+      },
+    });
 
     return review;
   }
