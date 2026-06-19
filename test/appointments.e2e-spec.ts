@@ -2,6 +2,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { createTestApp } from './helpers/test-setup';
+import { loginAndGetToken, seedDoctor, seedPatient } from './helpers/auth-helpers';
+import * as bcrypt from 'bcryptjs';
 
 jest.setTimeout(20000);
 
@@ -14,6 +16,8 @@ describe('Appointments Flow (e2e)', () => {
   let patientId: string;
   let connectionId: string;
   let appointmentId: string;
+  let doctorToken: string;
+  let patientToken: string;
 
   const uniqueSuffix = Math.random().toString(36).slice(2, 8);
   const weekdayNames = [
@@ -49,45 +53,43 @@ describe('Appointments Flow (e2e)', () => {
     const doctorEmail = `integration-doctor-${uniqueSuffix}@example.com`;
     const patientEmail = `integration-patient-${uniqueSuffix}@example.com`;
 
-    const doctorUser = await prisma.user.create({
-      data: {
-        email: doctorEmail,
-        password: 'password123',
-        firstName: 'Doctor',
-        lastName: 'Test',
-        role: 'DOCTOR',
-        status: 'ACTIVE',
-        isActive: true,
-      },
+    const hashedPassword = await bcrypt.hash('password123', 12);
+
+    const doctorUser = await seedDoctor(prisma, {
+      email: doctorEmail,
+      firstName: 'Doctor',
+      lastName: 'Test',
     });
     doctorUserId = doctorUser.id;
-
-    const doctor = await prisma.doctor.create({
-      data: {
-        userId: doctorUserId,
-      },
+    const doctorProfile = await prisma.doctor.findUnique({
+      where: { userId: doctorUserId },
     });
-    doctorId = doctor.id;
+    doctorId = doctorProfile!.id;
 
-    const patientUser = await prisma.user.create({
-      data: {
-        email: patientEmail,
-        password: 'password123',
-        firstName: 'Patient',
-        lastName: 'Test',
-        role: 'PATIENT',
-        status: 'ACTIVE',
-        isActive: true,
-      },
+    const patientUser = await seedPatient(prisma, {
+      email: patientEmail,
+      firstName: 'Patient',
+      lastName: 'Test',
     });
     patientUserId = patientUser.id;
-
-    const patient = await prisma.patient.create({
-      data: {
-        userId: patientUserId,
-      },
+    const patientProfile = await prisma.patient.findUnique({
+      where: { userId: patientUserId },
     });
-    patientId = patient.id;
+    patientId = patientProfile!.id;
+
+    const doctorLogin = await loginAndGetToken(
+      app,
+      doctorEmail,
+      'Password123!',
+    );
+    doctorToken = doctorLogin.accessToken;
+
+    const patientLogin = await loginAndGetToken(
+      app,
+      patientEmail,
+      'Password123!',
+    );
+    patientToken = patientLogin.accessToken;
 
     const connection = await prisma.doctorPatientConnection.create({
       data: {
@@ -135,7 +137,8 @@ describe('Appointments Flow (e2e)', () => {
     const appointmentEnd = new Date(appointmentDate.getTime() + 30 * 60 * 1000);
 
     const bookingResponse = await request(app!.getHttpServer())
-      .post('/api/v1/appointments')
+      .post('/api/v2/appointments/appointments')
+      .set('Authorization', `Bearer ${patientToken}`)
       .query({ patientId })
       .send({
         doctorId,
@@ -156,7 +159,8 @@ describe('Appointments Flow (e2e)', () => {
     expect(appointmentId).toBeDefined();
 
     const doctorAppointments = await request(app!.getHttpServer())
-      .get(`/api/v1/appointments/doctor/${doctorId}`)
+      .get(`/api/v2/appointments/appointments/doctor/${doctorId}`)
+      .set('Authorization', `Bearer ${doctorToken}`)
       .expect(200);
     expect(Array.isArray(doctorAppointments.body?.data)).toBe(true);
     expect(
@@ -166,7 +170,8 @@ describe('Appointments Flow (e2e)', () => {
     ).toBe(true);
 
     const patientAppointments = await request(app!.getHttpServer())
-      .get(`/api/v1/appointments/patient/${patientId}`)
+      .get(`/api/v2/appointments/appointments/patient/${patientId}`)
+      .set('Authorization', `Bearer ${patientToken}`)
       .expect(200);
     expect(Array.isArray(patientAppointments.body?.data)).toBe(true);
     expect(
@@ -181,7 +186,8 @@ describe('Appointments Flow (e2e)', () => {
     slotRangeEnd.setHours(23, 59, 59, 999);
 
     const availableSlots = await request(app!.getHttpServer())
-      .get(`/api/v1/appointments/doctor/${doctorId}/slots`)
+      .get(`/api/v2/appointments/appointments/doctor/${doctorId}/slots`)
+      .set('Authorization', `Bearer ${patientToken}`)
       .query({
         startDate: slotRangeStart.toISOString(),
         endDate: slotRangeEnd.toISOString(),
@@ -197,7 +203,8 @@ describe('Appointments Flow (e2e)', () => {
     ).toBe(false);
 
     const legacySlots = await request(app!.getHttpServer())
-      .get('/api/v1/appointments/slots/available')
+      .get('/api/v2/appointments/appointments/slots/available')
+      .set('Authorization', `Bearer ${patientToken}`)
       .query({
         doctorId,
         startDate: slotRangeStart.toISOString(),
@@ -209,7 +216,8 @@ describe('Appointments Flow (e2e)', () => {
     expect(Array.isArray(legacySlots.body.data.slots)).toBe(true);
 
     const rangeSlots = await request(app!.getHttpServer())
-      .get(`/api/v1/appointments/slots/range/${doctorId}`)
+      .get(`/api/v2/appointments/appointments/slots/range/${doctorId}`)
+      .set('Authorization', `Bearer ${patientToken}`)
       .query({
         start: slotRangeStart.toISOString(),
         end: slotRangeEnd.toISOString(),
@@ -220,7 +228,8 @@ describe('Appointments Flow (e2e)', () => {
     expect(Array.isArray(rangeSlots.body.data.slots)).toBe(true);
 
     const nextSlots = await request(app!.getHttpServer())
-      .get('/api/v1/appointments/slots/next')
+      .get('/api/v2/appointments/appointments/slots/next')
+      .set('Authorization', `Bearer ${patientToken}`)
       .query({ doctorId, days: 7 })
       .expect(200);
 
@@ -228,7 +237,8 @@ describe('Appointments Flow (e2e)', () => {
     expect(Array.isArray(nextSlots.body.data.nextSlots)).toBe(true);
 
     await request(app!.getHttpServer())
-      .patch(`/api/v1/appointments/${appointmentId}/confirm`)
+      .patch(`/api/v2/appointments/appointments/${appointmentId}/confirm`)
+      .set('Authorization', `Bearer ${patientToken}`)
       .query({ patientId })
       .expect(200);
 
@@ -237,7 +247,8 @@ describe('Appointments Flow (e2e)', () => {
     );
 
     const rescheduleResponse = await request(app!.getHttpServer())
-      .patch(`/api/v1/appointments/${appointmentId}/reschedule`)
+      .patch(`/api/v2/appointments/appointments/${appointmentId}/reschedule`)
+      .set('Authorization', `Bearer ${patientToken}`)
       .query({ patientId })
       .send({
         newStartTime: newAppointmentDate.toISOString(),
@@ -251,7 +262,8 @@ describe('Appointments Flow (e2e)', () => {
     expect(rescheduleResponse.body?.data?.status).toBe('CONFIRMED');
 
     const appointmentById = await request(app!.getHttpServer())
-      .get(`/api/v1/appointments/${appointmentId}`)
+      .get(`/api/v2/appointments/appointments/${appointmentId}`)
+      .set('Authorization', `Bearer ${patientToken}`)
       .query({ userId: patientId })
       .expect(200);
 
@@ -261,7 +273,8 @@ describe('Appointments Flow (e2e)', () => {
     );
 
     const cancellationResponse = await request(app!.getHttpServer())
-      .patch(`/api/v1/appointments/${appointmentId}/cancel`)
+      .patch(`/api/v2/appointments/appointments/${appointmentId}/cancel`)
+      .set('Authorization', `Bearer ${patientToken}`)
       .query({ userId: patientId })
       .send({ reason: 'PATIENT_REQUEST' })
       .expect(200);

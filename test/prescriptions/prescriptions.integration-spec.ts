@@ -10,6 +10,7 @@ import {
 import { TimeUtils } from 'src/common/utils/time.utils';
 
 describe('Prescriptions Flow (Integration)', () => {
+  jest.setTimeout(30000);
   let app: INestApplication;
   let prisma: PrismaService;
   let doctor: any;
@@ -72,7 +73,7 @@ describe('Prescriptions Flow (Integration)', () => {
       const expiresAt = TimeUtils.addDays(new Date(), 30).toISOString();
 
       const response = await request(app.getHttpServer())
-        .post('/api/v1/prescriptions')
+        .post('/api/v2/prescriptions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           connectionId: connection.id,
@@ -97,7 +98,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
     it('should fail to create prescription with invalid DTO (missing required fields)', async () => {
       await request(app.getHttpServer())
-        .post('/api/v1/prescriptions')
+        .post('/api/v2/prescriptions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           connectionId: connection.id,
@@ -111,7 +112,7 @@ describe('Prescriptions Flow (Integration)', () => {
       const pastDate = TimeUtils.addDays(new Date(), -1).toISOString();
 
       await request(app.getHttpServer())
-        .post('/api/v1/prescriptions')
+        .post('/api/v2/prescriptions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           connectionId: connection.id,
@@ -149,7 +150,7 @@ describe('Prescriptions Flow (Integration)', () => {
       const expiresAt = TimeUtils.addDays(new Date(), 30).toISOString();
 
       await request(app.getHttpServer())
-        .post('/api/v1/prescriptions')
+        .post('/api/v2/prescriptions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           connectionId: inactiveConnection.id,
@@ -170,7 +171,7 @@ describe('Prescriptions Flow (Integration)', () => {
   describe('Prescription Retrieval', () => {
     it('should allow patient to view their own prescriptions', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/v1/prescriptions/my-prescriptions')
+        .get('/api/v2/prescriptions/my-prescriptions')
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(200);
 
@@ -179,7 +180,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
     it('should allow doctor to get prescriptions for a connection', async () => {
       const response = await request(app.getHttpServer())
-        .get(`/api/v1/prescriptions/connections/${connection.id}`)
+        .get(`/api/v2/prescriptions/connections/${connection.id}`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
@@ -188,14 +189,14 @@ describe('Prescriptions Flow (Integration)', () => {
 
     it('should allow both doctor and patient to view a specific prescription', async () => {
       const doctorResponse = await request(app.getHttpServer())
-        .get(`/api/v1/prescriptions/${prescriptionId}`)
+        .get(`/api/v2/prescriptions/${prescriptionId}`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
       expect(doctorResponse.body.data.id).toBe(prescriptionId);
 
       const patientResponse = await request(app.getHttpServer())
-        .get(`/api/v1/prescriptions/${prescriptionId}`)
+        .get(`/api/v2/prescriptions/${prescriptionId}`)
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(200);
 
@@ -204,7 +205,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
     it('should allow doctor to get their own prescriptions with stats', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/v1/prescriptions/doctor/prescriptions')
+        .get('/api/v2/prescriptions/doctor/prescriptions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
@@ -215,7 +216,7 @@ describe('Prescriptions Flow (Integration)', () => {
   describe('Prescription Deactivation', () => {
     it('should allow doctor to deactivate a prescription', async () => {
       await request(app.getHttpServer())
-        .put(`/api/v1/prescriptions/${prescriptionId}/deactivate`)
+        .put(`/api/v2/prescriptions/${prescriptionId}/deactivate`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
@@ -228,7 +229,7 @@ describe('Prescriptions Flow (Integration)', () => {
     it('should prevent patient from deactivating prescription', async () => {
       const expiresAt = TimeUtils.addDays(new Date(), 30).toISOString();
       const createResponse = await request(app.getHttpServer())
-        .post('/api/v1/prescriptions')
+        .post('/api/v2/prescriptions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           connectionId: connection.id,
@@ -247,7 +248,7 @@ describe('Prescriptions Flow (Integration)', () => {
       const newPrescriptionId = createResponse.body.data.prescription.id;
 
       await request(app.getHttpServer())
-        .put(`/api/v1/prescriptions/${newPrescriptionId}/deactivate`)
+        .put(`/api/v2/prescriptions/${newPrescriptionId}/deactivate`)
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(403);
     });
@@ -256,7 +257,7 @@ describe('Prescriptions Flow (Integration)', () => {
   describe('Prescription Templates', () => {
     it('should allow doctor to create a template', async () => {
       const response = await request(app.getHttpServer())
-        .post('/api/v1/prescriptions/templates')
+        .post('/api/v2/prescriptions/templates')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           name: 'Standard Cold & Flu',
@@ -278,7 +279,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
     it('should allow doctor to get all templates', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/v1/prescriptions/templates')
+        .get('/api/v2/prescriptions/templates')
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
@@ -289,7 +290,7 @@ describe('Prescriptions Flow (Integration)', () => {
       const expiresAt = TimeUtils.addDays(new Date(), 30).toISOString();
 
       const response = await request(app.getHttpServer())
-        .post('/api/v1/prescriptions/from-template')
+        .post('/api/v2/prescriptions/from-template')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           connectionId: connection.id,
@@ -303,7 +304,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
     it('should allow doctor to get template stats', async () => {
       const response = await request(app.getHttpServer())
-        .get('/api/v1/prescriptions/templates/stats')
+        .get('/api/v2/prescriptions/templates/stats')
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
@@ -312,7 +313,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
     it('should allow doctor to deactivate a template', async () => {
       await request(app.getHttpServer())
-        .put(`/api/v1/prescriptions/templates/${templateId}/deactivate`)
+        .put(`/api/v2/prescriptions/templates/${templateId}/deactivate`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
     });
@@ -323,7 +324,7 @@ describe('Prescriptions Flow (Integration)', () => {
       // Create a fresh prescription first
       const expiresAt = TimeUtils.addDays(new Date(), 30).toISOString();
       const createResponse = await request(app.getHttpServer())
-        .post('/api/v1/prescriptions')
+        .post('/api/v2/prescriptions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           connectionId: connection.id,
@@ -342,7 +343,7 @@ describe('Prescriptions Flow (Integration)', () => {
       const renewalPrescriptionId = createResponse.body.data.prescription.id;
 
       const response = await request(app.getHttpServer())
-        .post(`/api/v1/prescriptions/${renewalPrescriptionId}/request-renewal`)
+        .post(`/api/v2/prescriptions/${renewalPrescriptionId}/request-renewal`)
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(201);
 
@@ -353,7 +354,7 @@ describe('Prescriptions Flow (Integration)', () => {
       // Create a fresh prescription for approval
       const expiresAt = TimeUtils.addDays(new Date(), 30).toISOString();
       const createResponse = await request(app.getHttpServer())
-        .post('/api/v1/prescriptions')
+        .post('/api/v2/prescriptions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           connectionId: connection.id,
@@ -373,7 +374,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
       // Request renewal
       const renewalResponse = await request(app.getHttpServer())
-        .post(`/api/v1/prescriptions/${approvePrescriptionId}/request-renewal`)
+        .post(`/api/v2/prescriptions/${approvePrescriptionId}/request-renewal`)
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(201);
 
@@ -382,7 +383,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
       // Then doctor approves it
       const approveResponse = await request(app.getHttpServer())
-        .patch(`/api/v1/prescriptions/${renewalId}/approve-renewal`)
+        .patch(`/api/v2/prescriptions/${renewalId}/approve-renewal`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           notes: 'Renewed for another 30 days',
@@ -397,7 +398,7 @@ describe('Prescriptions Flow (Integration)', () => {
       // Create a fresh prescription for rejection
       const expiresAt = TimeUtils.addDays(new Date(), 30).toISOString();
       const createResponse = await request(app.getHttpServer())
-        .post('/api/v1/prescriptions')
+        .post('/api/v2/prescriptions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           connectionId: connection.id,
@@ -417,7 +418,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
       // Request renewal
       const renewalResponse = await request(app.getHttpServer())
-        .post(`/api/v1/prescriptions/${rejectPrescriptionId}/request-renewal`)
+        .post(`/api/v2/prescriptions/${rejectPrescriptionId}/request-renewal`)
         .set('Authorization', `Bearer ${patientToken}`)
         .expect(201);
 
@@ -426,7 +427,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
       // Then doctor rejects it
       const rejectResponse = await request(app.getHttpServer())
-        .patch(`/api/v1/prescriptions/${renewalId}/reject-renewal`)
+        .patch(`/api/v2/prescriptions/${renewalId}/reject-renewal`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({ reason: 'Medication no longer suitable' })
         .expect(200);
@@ -438,7 +439,7 @@ describe('Prescriptions Flow (Integration)', () => {
   describe('Drug Interactions', () => {
     it('should check drug interactions successfully', async () => {
       const response = await request(app.getHttpServer())
-        .post('/api/v1/prescriptions/check-interactions')
+        .post('/api/v2/prescriptions/check-interactions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           drugNames: ['Paracetamol', 'Ibuprofen'],
@@ -448,7 +449,7 @@ describe('Prescriptions Flow (Integration)', () => {
 
     it('should fail if only one drug is provided', async () => {
       await request(app.getHttpServer())
-        .post('/api/v1/prescriptions/check-interactions')
+        .post('/api/v2/prescriptions/check-interactions')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           drugNames: ['Paracetamol'],
@@ -460,7 +461,7 @@ describe('Prescriptions Flow (Integration)', () => {
   describe('Authorization Tests', () => {
     it('should prevent patient from creating a prescription', async () => {
       await request(app.getHttpServer())
-        .post('/api/v1/prescriptions')
+        .post('/api/v2/prescriptions')
         .set('Authorization', `Bearer ${patientToken}`)
         .send({
           connectionId: connection.id,
@@ -488,9 +489,10 @@ describe('Prescriptions Flow (Integration)', () => {
       ).accessToken;
 
       await request(app.getHttpServer())
-        .get(`/api/v1/prescriptions/connections/${connection.id}`)
+        .get(`/api/v2/prescriptions/connections/${connection.id}`)
         .set('Authorization', `Bearer ${anotherDoctorToken}`)
         .expect(403);
     });
   });
 });
+

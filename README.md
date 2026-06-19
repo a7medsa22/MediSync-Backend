@@ -185,39 +185,39 @@ WebSocket notification sent to doctor in real-time
 - [x] Real-time Chat & Notifications
 - [x] File management for medical records
 
-### Phase 2: Clinical Operations 🚀
+### Phase 2: Clinical Operations ✅
 
 _Turning the app from a "chat tool" into a professional clinic management system._
 
 #### 2.1 — Appointment Scheduling Engine
 
-- Doctors define availability slots (days, hours, duration per session).
-- Patient booking with **Redis Locks** to prevent double-booking.
-- State management: `PENDING` → `CONFIRMED` → `IN_PROGRESS` → `COMPLETED` → `CANCELLED`.
-- Auto-reminders via **@nestjs/schedule** (24h/1h before).
-- Calendar export (.ics) for Google/Apple Calendar.
+- [x] Doctors define availability slots (days, hours, duration per session).
+- [x] Patient booking with **Redis Locks** to prevent double-booking.
+- [x] State management: `PENDING` → `CONFIRMED` → `IN_PROGRESS` → `COMPLETED` → `CANCELLED`.
+- [x] Auto-reminders via **@nestjs/schedule** (24h/1h before).
+- [x] Calendar export (.ics) for Google/Apple Calendar.
 
 #### 2.2 — Advanced Prescription System
 
-- Prescription templates for reusable medication combos.
-- **Drug Interaction Checker** (Integration with OpenFDA or similar API).
-- Expiry tracking and patient renewal requests.
-- **Pharmacy-ready PDF generation** with doctor signature watermarks (pdfkit).
+- [x] Prescription templates for reusable medication combos.
+- [x] **Drug Interaction Checker** (Integration with OpenFDA or similar API).
+- [x] Expiry tracking and patient renewal requests.
+- [x] **Pharmacy-ready PDF generation** with doctor signature watermarks (pdfkit).
 
-#### 2.3 — Medical Records V2
+#### 2.3 — Medical Records (API v2)
 
-- File versioning and auto-categorization (LAB_RESULT, XRAY, etc.).
-- **End-to-End Encryption (AES-256)** for files at rest.
-- Automatic image compression using **sharp**.
-- **File Access Audit Logs** (HIPAA-style tracking).
-- Scoped record sharing (Patient shares specific files with specific doctors).
+- [x] File versioning and auto-categorization (LAB_RESULT, XRAY, etc.).
+- [x] **End-to-End Encryption (AES-256)** for files at rest.
+- [x] S3 Storage Integration for scalable file management.
+- [x] **File Access Audit Logs** (HIPAA-style tracking).
+- [x] Scoped record sharing (Patient shares specific files with specific doctors).
 
 #### 2.4 — Clinic & Doctor Profile System
 
-- Multi-clinic management (different fees/schedules per clinic).
-- Admin-led Clinic verification (license uploads).
-- Patient reviews/ratings with abuse detection.
-- Specialization tags and education history.
+- [x] Multi-clinic management (different fees/schedules per clinic).
+- [x] Admin-led Clinic verification (license uploads).
+- [x] Patient reviews/ratings with caching support.
+- [x] Specialization tags and education history.
 
 ---
 

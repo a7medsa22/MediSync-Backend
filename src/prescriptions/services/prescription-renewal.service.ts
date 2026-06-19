@@ -244,7 +244,7 @@ export class PrescriptionRenewalService {
       : 'Doctor';
     // 4. Notify patient
     this.eventEmitter.emit('notification.trigger', {
-      userId: newPrescription.patientId,
+      userId: newPrescription.patient.user.id,
       type: 'PRESCRIPTION_RENEWAL_APPROVED',
       data: {
         prescriptionId: newPrescription.id,
@@ -288,6 +288,7 @@ export class PrescriptionRenewalService {
     const renewal = await this.prisma.prescriptionRenewal.findUnique({
       where: { id: renewalId },
       include: {
+        patient: { select: { userId: true } },
         prescription: {
           include: {
             prescriptionMedications: true,
@@ -342,7 +343,7 @@ export class PrescriptionRenewalService {
       ? `${doctorUser.firstName} ${doctorUser.lastName}`
       : 'Doctor';
     this.eventEmitter.emit('notification.trigger', {
-      userId: renewal.patientId,
+      userId: renewal.patient.userId,
       type: 'PRESCRIPTION_RENEWAL_REJECTED',
       data: {
         prescriptionId: originalPrescription.id,

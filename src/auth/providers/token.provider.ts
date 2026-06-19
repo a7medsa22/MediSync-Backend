@@ -13,7 +13,7 @@ export class TokenProvider {
     private jwtService: JwtService,
     private configService: ConfigService,
     private prisma: PrismaService,
-  ) {}
+  ) { }
 
   // Refresh tokens
   async refreshTokens(userId: string, tokenId: string) {

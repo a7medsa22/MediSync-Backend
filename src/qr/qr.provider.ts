@@ -13,7 +13,7 @@ export class QrProvider {
    * Format: MDS_doctorId_randomString
    */
   generateToken(doctorId: string): string {
-    const randomPart = crypto.randomBytes(24).toString('base64url'); // Generate 32 char random string
+    const randomPart = crypto.randomBytes(16).toString('hex'); // Generate 32 char hex string to avoid underscores
     const baseToken = `${this.config.get('QR_TOKEN_PREFIX')}${doctorId}_${randomPart}`;
     return baseToken;
   }

@@ -74,7 +74,7 @@ export class MessageService {
       throw new NotFoundException('Chat not found');
     }
 
-    if (!this.chatService.hasAccess(chat, userId)) {
+    if (!this.chatService.canAccessChat(chat, userId)) {
       throw new ForbiddenException('No access to this chat');
     }
 

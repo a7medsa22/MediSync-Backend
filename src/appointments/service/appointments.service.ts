@@ -111,15 +111,20 @@ export class AppointmentsService {
     const dateText = appointment.startTime.toDateString();
     const timeText = appointment.startTime.toLocaleTimeString();
 
-    [appointment.patientId, appointment.doctorId].forEach((userId) =>
-      this.eventEmitter.emit('notification.trigger', {
-        userId,
-        type: NotificationType.APPOINTMENT_REMINDER,
-        data: {
-          appointmentId: appointment.id,
-        },
-      }),
-    );
+    const doc = await this.prisma.doctor.findUnique({ where: { id: appointment.doctorId }, select: { userId: true } });
+    const pat = await this.prisma.patient.findUnique({ where: { id: appointment.patientId }, select: { userId: true } });
+
+    if (doc && pat) {
+      [pat.userId, doc.userId].forEach((userId) =>
+        this.eventEmitter.emit('notification.trigger', {
+          userId,
+          type: NotificationType.APPOINTMENT_REMINDER,
+          data: {
+            appointmentId: appointment.id,
+          },
+        }),
+      );
+    }
 
     return true;
   }
@@ -142,13 +147,18 @@ export class AppointmentsService {
       metadata: { timeframe },
     };
 
-    [appointment.patientId, appointment.doctorId].forEach((userId) =>
-      this.eventEmitter.emit('notification.trigger', {
-        userId,
-        type: NotificationType.APPOINTMENT_REMINDER,
-        data: notificationData,
-      }),
-    );
+    const doc = await this.prisma.doctor.findUnique({ where: { id: appointment.doctorId }, select: { userId: true } });
+    const pat = await this.prisma.patient.findUnique({ where: { id: appointment.patientId }, select: { userId: true } });
+
+    if (doc && pat) {
+      [pat.userId, doc.userId].forEach((userId) =>
+        this.eventEmitter.emit('notification.trigger', {
+          userId,
+          type: NotificationType.APPOINTMENT_REMINDER,
+          data: notificationData,
+        }),
+      );
+    }
 
     return { reminderSent: true, timeframe };
   }
@@ -181,11 +191,13 @@ export class AppointmentsService {
       include: {
         doctor: {
           select: {
+            userId: true,
             user: { select: { firstName: true, lastName: true } },
           },
         },
         patient: {
           select: {
+            userId: true,
             user: { select: { firstName: true, lastName: true } },
           },
         },
@@ -193,7 +205,7 @@ export class AppointmentsService {
     });
 
     this.eventEmitter.emit('notification.trigger', {
-      userId: doctorId,
+      userId: appointment.doctor.userId,
       type: NotificationType.APPOINTMENT_BOOKED,
       data: {
         patientName: `${appointment.patient.user.firstName} ${appointment.patient.user.lastName}`,
@@ -225,6 +237,9 @@ export class AppointmentsService {
           status: true,
           doctorId: true,
           startTime: true,
+          doctor: {
+            select: { userId: true },
+          },
           patient: {
             select: {
               user: { select: { firstName: true, lastName: true } },
@@ -235,7 +250,7 @@ export class AppointmentsService {
 
       // Notify doctor
       this.eventEmitter.emit('notification.trigger', {
-        userId: updateAppoinment.doctorId,
+        userId: updateAppoinment.doctor.userId,
         type: NotificationType.APPOINTMENT_CONFIRMED,
         data: {
           patientName: `${updateAppoinment.patient.user.firstName} ${updateAppoinment.patient.user.lastName}`,
@@ -318,6 +333,8 @@ export class AppointmentsService {
           cancelledBy: true,
           doctorId: true,
           patientId: true,
+          doctor: { select: { userId: true } },
+          patient: { select: { userId: true } },
         },
       });
 
@@ -329,7 +346,7 @@ export class AppointmentsService {
 
       this.eventEmitter.emit('notification.trigger', {
         userId:
-          updated.doctorId === userId ? updated.patientId : updated.doctorId,
+          updated.doctorId === userId ? updated.patient.userId : updated.doctor.userId,
         type: NotificationType.APPOINTMENT_CANCELLED,
         data: {
           date: updated.startTime.toDateString(),

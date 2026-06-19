@@ -298,8 +298,8 @@ export class ChatService {
   }
   canAccessChat(chatHeader: any, userId: string) {
     return (
-      chatHeader.doctor.userId === userId ||
-      chatHeader.patient.userId === userId
+      chatHeader.connection.doctor.userId === userId ||
+      chatHeader.connection.patient.userId === userId
     );
   }
   hasAccess(chat: any, userId: string) {

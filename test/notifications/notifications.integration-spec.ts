@@ -1,8 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { INestApplication } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { AppModule } from 'src/app.module';
+import { createTestApp } from '../helpers/test-setup';
 
 describe('Notification Module (Event-Driven Integration)', () => {
   let app: INestApplication;
@@ -10,22 +9,13 @@ describe('Notification Module (Event-Driven Integration)', () => {
   let prisma: PrismaService;
 
   beforeAll(async () => {
-    const moduleRef: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    await app.init();
-
+    const setup = await createTestApp();
+    app = setup.app;
+    prisma = setup.prisma;
     eventEmitter = app.get(EventEmitter2);
-    prisma = app.get(PrismaService);
   });
 
   afterAll(async () => {
-    if (prisma) {
-      await prisma.notification.deleteMany({});
-      await prisma.$disconnect();
-    }
     if (app) {
       await app.close();
     }

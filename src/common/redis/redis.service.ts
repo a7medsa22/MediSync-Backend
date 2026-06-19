@@ -18,6 +18,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     this.client = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+      password: process.env.REDIS_PASSWORD,
       maxRetriesPerRequest: 3,
       retryStrategy: (times) => {
         const delay = Math.min(times * 50, 2000);

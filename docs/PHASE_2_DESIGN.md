@@ -65,29 +65,35 @@ Enabling multi-tenant clinic support and public-facing profiles.
 
 ---
 
-## 📁 Proposed Phase 2 Directory Structure
+## 📁 Actual Phase 2 Directory Structure
 
-To maintain a clean separation of concerns, the following structure is proposed for the Phase 2 modules:
+The following structure represents the implemented Phase 2 modules and their responsibilities:
 
 ```bash
 src/
 ├── appointments/
-│   ├── controllers/         # Appointment & Availability endpoints
-│   ├── services/            # SlotGenerator, AvailabilityService
+│   ├── controllers/         # Endpoints for appointments & availability
+│   ├── service/             # Appointment, Availability, & SlotGenerator services
 │   ├── dto/                 # Request/Response validation
-│   └── appointments.module.ts
+│   ├── enums/               # Appointment-specific enums
+│   └── policies/            # Business logic rules (refunds, statuses)
 ├── prescriptions/
-│   ├── services/            # PrescriptionService, DrugInteraction, PDFGenerator
-│   ├── dto/                 # Templates & Medication DTOs
-│   └── prescriptions.module.ts
+│   ├── services/            # Core logic, PDF generation, renewal tracking
+│   ├── dto/                 # Validation for prescriptions and renewals
+│   └── (module root)        # Controller & Module definition
 ├── medical-records/
-│   ├── services/            # EncryptionService, AuditService, Compression
-│   ├── dto/                 # Versioning & Sharing DTOs
-│   └── medical-records.module.ts
-└── clinics/
-    ├── services/            # ClinicService, Verification, Insurance
-    ├── dto/                 # Clinic & Review DTOs
-    └── clinics.module.ts
+│   ├── dto/                 # Record creation and sharing DTOs
+│   ├── types/               # Custom types for encryption metadata
+│   └── (module root)        # Service, Controller, & Module definition
+├── clinics/
+│   ├── dto/                 # Clinic profile and review DTOs
+│   └── (module root)        # Services & controllers for clinics and profiles
+└── common/
+    ├── audit/               # File access audit logging system
+    ├── encryption/          # AES-256 encryption service
+    ├── storage/             # S3 storage integration
+    ├── redis-lock/          # Distributed locking for double-booking prevention
+    └── cache/               # Caching services for clinics and doctor profiles
 ```
 
 ---
@@ -131,14 +137,14 @@ src/
 
 | Module | Status | Technical Notes |
 | :--- | :--- | :--- |
-| **Appointments** | 🏗️ Planning | Focus on SlotGenerator algorithm efficiency. |
-| **Prescriptions** | 🏗️ Planning | PDF watermark generation using pdfkit. |
-| **Medical Records** | 🏗️ Planning | AES-256 implementation via EncryptionService. |
-| **Clinics** | 🏗️ Planning | Multi-clinic fee structures and verification. |
+| **Appointments** | ✅ Completed | Fully implemented with SlotGenerator and Redis locks. |
+| **Prescriptions** | ✅ Completed | Includes PDF generation and Drug Interaction logic. |
+| **Medical Records** | ✅ Completed | V2 API implemented with S3 storage and AES-256 encryption. |
+| **Clinics** | ✅ Completed | Doctor profiles, caching, and clinic verification added. |
 
 ---
 
-*Last Updated: April 2026*
+*Last Updated: June 2026*
 
 ---
 

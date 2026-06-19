@@ -53,6 +53,11 @@ export async function loginAndGetToken(
     .post('/api/v1/auth/login')
     .send({ email, password });
 
+  if (!response.body || !response.body.data) {
+    console.error('Login failed! Status:', response.status, 'Body:', response.body);
+    throw new Error(`Login failed for ${email} with status ${response.status}`);
+  }
+
   return {
     accessToken: response.body.data.accessToken,
     refreshToken: response.body.data.refreshToken,

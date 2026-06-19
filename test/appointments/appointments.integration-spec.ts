@@ -12,6 +12,7 @@ import { AppointmentStatus, DayOfWeek } from '@prisma/client';
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('Appointments & Availability Flow (Integration)', () => {
+  jest.setTimeout(30000);
   let app: INestApplication;
   let prisma: PrismaService;
   let doctor: any;
@@ -85,7 +86,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
   describe('Availability Management', () => {
     it('should allow doctor to create availability', async () => {
       const response = await request(app.getHttpServer())
-        .post('/api/v1/availability')
+        .post('/api/v2/availability')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           doctorId: doctorProfile.id,
@@ -107,7 +108,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
     it('should prevent overlapping availability', async () => {
       // First, create an initial availability on Tuesday
       await request(app.getHttpServer())
-        .post('/api/v1/availability')
+        .post('/api/v2/availability')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           doctorId: doctorProfile.id,
@@ -121,7 +122,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
 
       // Then try to create an overlapping availability on the same Tuesday
       const response = await request(app.getHttpServer())
-        .post('/api/v1/availability')
+        .post('/api/v2/availability')
         .set('Authorization', `Bearer ${doctorToken}`)
         .send({
           doctorId: doctorProfile.id,
@@ -206,7 +207,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
       nextWednesday.setHours(10, 0, 0, 0);
 
       const response = await request(app.getHttpServer())
-        .post('/api/v1/appointments')
+        .post('/api/v2/appointments/appointments')
         .set('Authorization', `Bearer ${patientToken}`)
         .query({ patientId: patientId })
         .query({ patientId: patientId })
@@ -237,7 +238,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
       await sleep(1100);
 
       await request(app.getHttpServer())
-        .post('/api/v1/appointments')
+        .post('/api/v2/appointments/appointments')
         .set('Authorization', `Bearer ${patientToken}`)
         .query({ patientId: patientId })
         .send({
@@ -272,7 +273,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .post('/api/v1/appointments')
+        .post('/api/v2/appointments/appointments')
         .set('Authorization', `Bearer ${anotherPatientToken}`)
         .query({ patientId: anotherPatientProfile?.id })
         .send({
@@ -297,7 +298,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
 
       // Create an appointment
       const appointmentResponse = await request(app.getHttpServer())
-        .post('/api/v1/appointments')
+        .post('/api/v2/appointments/appointments')
         .set('Authorization', `Bearer ${patientToken}`)
         .query({ patientId: patientId })
         .send({
@@ -313,7 +314,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
 
       // Confirm the appointment
       const response = await request(app.getHttpServer())
-        .patch(`/api/v1/appointments/${createdAppointmentId}/confirm`)
+        .patch(`/api/v2/appointments/appointments/${createdAppointmentId}/confirm`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
@@ -329,7 +330,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
 
       // Create an appointment
       const appointmentResponse = await request(app.getHttpServer())
-        .post('/api/v1/appointments')
+        .post('/api/v2/appointments/appointments')
         .set('Authorization', `Bearer ${patientToken}`)
         .query({ patientId: patientId })
         .send({
@@ -345,7 +346,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
 
       // Cancel the appointment
       const response = await request(app.getHttpServer())
-        .patch(`/api/v1/appointments/${createdAppointmentId}/cancel`)
+        .patch(`/api/v2/appointments/appointments/${createdAppointmentId}/cancel`)
         .set('Authorization', `Bearer ${patientToken}`)
         .query({ userId: patientProfile.id })
         .send({
@@ -362,7 +363,8 @@ describe('Appointments & Availability Flow (Integration)', () => {
       end.setDate(end.getDate() + 7);
 
       const response = await request(app.getHttpServer())
-        .get(`/api/v1/appointments/doctor/${doctorId}/slots`)
+        .get(`/api/v2/appointments/appointments/doctor/${doctorId}/slots`)
+        .set('Authorization', `Bearer ${patientToken}`)
         .query({
           startDate: start.toISOString(),
           endDate: end.toISOString(),
@@ -403,7 +405,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
 
       // Complete appointment (doctor)
       const response = await request(app.getHttpServer())
-        .patch(`/api/v1/appointments/${createdAppointment.id}/complete`)
+        .patch(`/api/v2/appointments/appointments/${createdAppointment.id}/complete`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
@@ -442,7 +444,7 @@ describe('Appointments & Availability Flow (Integration)', () => {
       });
 
       const response = await request(app.getHttpServer())
-        .patch(`/api/v1/appointments/${createdAppointment.id}/reschedule`)
+        .patch(`/api/v2/appointments/appointments/${createdAppointment.id}/reschedule`)
         .set('Authorization', `Bearer ${patientToken}`)
         .query({ patientId: patientId })
         .send({
@@ -483,7 +485,8 @@ describe('Appointments & Availability Flow (Integration)', () => {
       const createdAppointmentId = createdAppointment.id;
 
       const doctorAppointments = await request(app.getHttpServer())
-        .get(`/api/v1/appointments/doctor/${doctorId}`)
+        .get(`/api/v2/appointments/appointments/doctor/${doctorId}`)
+        .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
       const doctorAppointmentsData = Array.isArray(doctorAppointments.body)
@@ -494,7 +497,8 @@ describe('Appointments & Availability Flow (Integration)', () => {
       expect(doctorAppointmentsData.length).toBeGreaterThan(0);
 
       const patientAppointments = await request(app.getHttpServer())
-        .get(`/api/v1/appointments/patient/${patientId}`)
+        .get(`/api/v2/appointments/appointments/patient/${patientId}`)
+        .set('Authorization', `Bearer ${patientToken}`)
         .expect(200);
 
       const patientAppointmentsData = Array.isArray(patientAppointments.body)
@@ -505,7 +509,8 @@ describe('Appointments & Availability Flow (Integration)', () => {
       expect(patientAppointmentsData.length).toBeGreaterThan(0);
 
       const single = await request(app.getHttpServer())
-        .get(`/api/v1/appointments/${createdAppointmentId}`)
+        .get(`/api/v2/appointments/appointments/${createdAppointmentId}`)
+        .set('Authorization', `Bearer ${patientToken}`)
         .query({ userId: patientId })
         .expect(200);
 

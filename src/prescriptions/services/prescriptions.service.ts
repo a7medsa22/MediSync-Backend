@@ -93,6 +93,9 @@ export class PrescriptionsService {
         select: {
           id: true,
           patientId: true,
+          patient: {
+            select: { userId: true },
+          },
           doctor: {
             select: {
               user: {
@@ -133,7 +136,7 @@ export class PrescriptionsService {
 
     //  Notify patient
     this.eventEmitter.emit('notification.trigger', {
-      userId: prescription.patientId,
+      userId: prescription.patient.userId,
       type: 'NEW_PRESCRIPTION',
       data: {
         prescriptionId: prescription.id,
@@ -437,6 +440,9 @@ export class PrescriptionsService {
         doctorId: true,
         status: true,
         patientId: true,
+        patient: {
+          select: { userId: true },
+        },
         doctor: {
           select: { user: { select: { firstName: true, lastName: true } } },
         },
@@ -495,7 +501,7 @@ export class PrescriptionsService {
 
     // Notify patient
     this.eventEmitter.emit('notification.trigger', {
-      userId: userId,
+      userId: prescription.patient.userId,
       type: 'PRESCRIPTION_CANCELLED',
       data: {
         prescriptionId,
@@ -726,12 +732,15 @@ export class PrescriptionsService {
         status: 'ACTIVE',
         expireAt: { gte: new Date(), lte: threeDaysFromNow },
       },
-      include: { prescriptionMedications: { take: 1 } },
+      include: {
+        patient: { select: { userId: true } },
+        prescriptionMedications: { take: 1 },
+      },
     });
 
     for (const rx of expiring) {
       this.eventEmitter.emit('notification.trigger', {
-        userId: rx.patientId,
+        userId: rx.patient.userId,
         type: 'PRESCRIPTION_EXPIRY_REMINDER',
         data: {
           prescriptionId: rx.id,

@@ -101,9 +101,9 @@ describe('Chat Flow (Integration)', () => {
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(200);
 
-      // Service returns { data: [...] }, interceptor extracts .data
-      expect(response.body.data.length).toBeGreaterThan(0);
-      expect(response.body.data[0].content).toBe('Hello Doctor!');
+      // Service returns { messages, cursor, hasMore }, data wrapper is from interceptor
+      expect(response.body.data.messages.length).toBeGreaterThan(1);
+      expect(response.body.data.messages[1].content).toBe('Hello Doctor!');
     });
 
     it('should allow user to mark message as read', async () => {
@@ -111,7 +111,7 @@ describe('Chat Flow (Integration)', () => {
         .get(`/api/v1/chat/${chatId}/messages`)
         .set('Authorization', `Bearer ${doctorToken}`);
 
-      const messageId = messagesResponse.body.data[0].id;
+      const messageId = messagesResponse.body.data.messages[1].id;
 
       await request(app.getHttpServer())
         .put(`/api/v1/chat/messages/${messageId}/read`)
@@ -137,7 +137,7 @@ describe('Chat Flow (Integration)', () => {
       await request(app.getHttpServer())
         .get(`/api/v1/chat/${chatId}`)
         .set('Authorization', `Bearer ${anotherPatientToken}`)
-        .expect(400); // Controller throws BadRequestException if verifyUserAccess fails
+        .expect(403); // Controller throws ForbiddenException if verifyUserAccess fails
     });
   });
 });

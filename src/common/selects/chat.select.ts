@@ -36,6 +36,13 @@ export const chatDetailsSelect = {
 } as const;
 
 export const chatDetailsSelectWithStatus = {
-  ...chatDetailsSelect,
-  connection: { select: { status: true } },
+  id: true,
+  connection: {
+    select: {
+      id: true,
+      status: true,
+      doctor: { select: participantSelect },
+      patient: { select: participantSelect },
+    },
+  },
 } as const;
