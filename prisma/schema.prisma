@@ -36,6 +36,7 @@ model User {
   notifications     Notification[]
   otps              Otp[]
   patient           Patient?
+  fileAuditLogs     FileAuditLog[]
 
   @@index([status])
   @@index([isActive])
@@ -203,36 +204,80 @@ model FollowUpRequest {
 }
 
 model MedicalRecord {
-  id           String                   @id @default(uuid())
-  patientId    String?
-  doctorId     String?
-  connectionId String?
-  fileName     String
-  fileUrl      String
-  fileSize     Int
-  mimeType     String
-  title        String
-  description  String?
-  treatment    String?
-  medications  String?
-  uploadedBy   String
-  isVerified   Boolean                  @default(false)
-  notes        String?
-  attachments  Json?
-  recordDate   DateTime                 @default(now())
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
-  fileType     RecordType
-  connection   DoctorPatientConnection? @relation(fields: [connectionId], references: [id])
-  doctor       Doctor?                  @relation(fields: [doctorId], references: [id])
-  patient      Patient?                 @relation(fields: [patientId], references: [id])
+  id                 String     @id @default(uuid())
+  patientId          String     
+  fileName           String
+  fileUrl            String
+  recordType         RecordType @default(OTHER)
+  fileSize           BigInt
+  mimeType           String
+  title              String
+  description        String?    @db.Text
+  recordDate         DateTime   @default(now())
+  uploadedBy         String     
+  doctorId           String?
+  version            Int        @default(1)
+  isEncrypted        Boolean    @default(true)
+  encryptionMetadata Json // {algorithm, iv, authTag, keyId}
+  isVerified         Boolean    @default(false)
+  verifyNotes        String?    
+  clinicId           String?    
+  connectionId       String?    
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  
+  doctor     Doctor?                   @relation(fields: [doctorId], references: [id])
+  patient    Patient                   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  connection DoctorPatientConnection? @relation(fields: [connectionId], references: [id])
+  shares     RecordShare[]
+  auditLogs  FileAuditLog[]
 
   @@index([patientId])
-  @@index([doctorId])
-  @@index([connectionId])
-  @@index([createdAt])
-  @@index([recordDate])
+  @@index([clinicId])
+  @@map("medical_records")
 }
+
+model RecordShare {
+  id               String   @id @default(uuid())
+  recordId         String   
+  sharedWithUserId String   
+  sharedBy         String   
+  canDownload      Boolean  @default(true)
+  canShare         Boolean  @default(false)
+  expiresAt        DateTime
+  sharedAt         DateTime @default(now())
+
+  medicalRecord MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([sharedWithUserId])
+  @@index([recordId])
+  @@map("record_shares")
+}
+
+model FileAuditLog {
+  id        String      @id @default(uuid()) 
+  recordId  String      
+  userId    String      
+  action    AuditAction
+  ipAddress String
+  userAgent String
+  timestamp DateTime    @default(now())
+
+  medicalRecord MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([recordId])
+  @@map("file_audit_logs")
+}
+
+enum AuditAction {
+  VIEW
+  DOWNLOAD
+  SHARE
+  DELETE
+  UPLOAD
+}
+
 
 model Prescription {
   id                      String                   @id @default(uuid())

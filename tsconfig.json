@@ -19,7 +19,7 @@
       "src/*": ["src/*"],
       "@/*": ["src/*"]
     },
-    "types": ["jest", "node"],
+    "types": ["jest", "node", "multer"],
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,

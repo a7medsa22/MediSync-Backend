@@ -1,0 +1,16 @@
+import { Global, Module } from '@nestjs/common';
+import { S3StorageService } from './s3-storage.service';
+
+export const STORAGE_SERVICE = 'STORAGE_SERVICE';
+
+@Global()
+@Module({
+  providers: [
+    {
+      provide: STORAGE_SERVICE,
+      useClass: S3StorageService,
+    },
+  ],
+  exports: [STORAGE_SERVICE],
+})
+export class StorageModule {}

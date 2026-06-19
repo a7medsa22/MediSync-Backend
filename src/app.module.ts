@@ -19,6 +19,7 @@ import { RedisPubSubModule } from './common/redis-pubsub/redis-pubsub.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ClinicsModule } from './clinics/clinics.module';
+import { MedicalRecordsModule } from './medical-records/medical-records.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { ClinicsModule } from './clinics/clinics.module';
     ChatModule,
     AppointmentsModule,
     ClinicsModule,
+    MedicalRecordsModule,
   ],
   providers: [
     {
