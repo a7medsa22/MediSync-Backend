@@ -1,5 +1,8 @@
 ## 🏥 MediSync API
 
+🚀 **Deployed on AWS and Ready for Production!**
+📚 **Live API Documentation:** [Apidog](https://e2bnqv34pt.apidog.io/)
+
 **MediSync** is a professional **Medical follow-up & Records Management System** built with **NestJS**, designed to streamline healthcare processes between doctors and patients.
 
 ### ❓ Problem Statement
@@ -376,6 +379,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-🧑‍💻 **Live Swagger Docs**: [https://medisync-api.onrender.com/api-docs](https://medisync-api.onrender.com/api-docs)
+🚀 **Production API (AWS)**: Deployed and Ready
+🧑‍💻 **Live API Docs**: [https://e2bnqv34pt.apidog.io/](https://e2bnqv34pt.apidog.io/)
 
 **Built with ❤️ for better healthcare management**
